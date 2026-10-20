@@ -23,6 +23,8 @@ class LLMProvider:
     # capability (e.g. MiniMax M3 supports vision but M2.7 is text-only). The
     # provider-level extra_config holds the default (default_model) capability.
     model_vision_overrides: dict[str, bool] = field(default_factory=dict)
+    # Per-model limits and protocol settings for providers sharing an endpoint.
+    model_config_overrides: dict[str, dict] = field(default_factory=dict)
     auth_hint: str | None = None
     base_url_prompt: str | None = None
     model_prompt: str | None = None
@@ -38,6 +40,7 @@ class LLMProvider:
         config = dict(self.extra_config)
         if model_name in self.model_vision_overrides:
             config["supports_vision"] = self.model_vision_overrides[model_name]
+        config.update(self.model_config_overrides.get(model_name, {}))
         return config
 
 
@@ -420,7 +423,7 @@ LLM_PROVIDERS: list[LLMProvider] = [
         display_name="MiniMax",
         description="International OpenAI-compatible endpoint",
         use="langchain_openai:ChatOpenAI",
-        models=["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
+        models=["MiniMax-M3", "MiniMax-M3.1-Flash", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
         default_model="MiniMax-M3",
         env_var="MINIMAX_API_KEY",
         package="langchain-openai",
@@ -437,14 +440,21 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "MiniMax-M2.7": False,
             "MiniMax-M2.7-highspeed": False,
         },
+        model_config_overrides={
+            "MiniMax-M3.1-Flash": {
+                "max_tokens": 131072,
+                "context_window": 1000000,
+                "supports_reasoning_effort": False,
+            },
+        },
     ),
     LLMProvider(
         name="minimax_cn",
         display_name="MiniMax CN",
         description="China OpenAI-compatible endpoint",
         use="langchain_openai:ChatOpenAI",
-        models=["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
-        default_model="MiniMax-M3",
+        models=["MiniMax-M3.1-Flash", "MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
+        default_model="MiniMax-M3.1-Flash",
         env_var="MINIMAX_API_KEY",
         package="langchain-openai",
         extra_config={
@@ -459,6 +469,13 @@ LLM_PROVIDERS: list[LLMProvider] = [
         model_vision_overrides={
             "MiniMax-M2.7": False,
             "MiniMax-M2.7-highspeed": False,
+        },
+        model_config_overrides={
+            "MiniMax-M3.1-Flash": {
+                "max_tokens": 131072,
+                "context_window": 1000000,
+                "supports_reasoning_effort": False,
+            },
         },
     ),
     LLMProvider(
