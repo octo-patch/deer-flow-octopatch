@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field, replace
 
 
@@ -23,6 +24,7 @@ class LLMProvider:
     # capability (e.g. MiniMax M3 supports vision but M2.7 is text-only). The
     # provider-level extra_config holds the default (default_model) capability.
     model_vision_overrides: dict[str, bool] = field(default_factory=dict)
+    model_config_overrides: dict[str, dict] = field(default_factory=dict)
     auth_hint: str | None = None
     base_url_prompt: str | None = None
     model_prompt: str | None = None
@@ -35,7 +37,8 @@ class LLMProvider:
 
         Does not mutate the shared provider-level ``extra_config``.
         """
-        config = dict(self.extra_config)
+        config = deepcopy(self.extra_config)
+        config.update(deepcopy(self.model_config_overrides.get(model_name, {})))
         if model_name in self.model_vision_overrides:
             config["supports_vision"] = self.model_vision_overrides[model_name]
         return config
@@ -61,6 +64,28 @@ class SearchProvider:
     env_var: str | None  # None = no API key required
     tool_name: str = "web_search"
     extra_config: dict = field(default_factory=dict)
+
+
+MINIMAX_MODEL_CONFIGS = {
+    "MiniMax-M3.1-Flash": {
+        "context_window": 1_000_000,
+        "max_tokens": 524_288,
+        "reasoning": {
+            "thinking": "required",
+            "dialect": "none",
+            "history": "preserve",
+            "effort": {"values": ["low", "medium", "high", "xhigh", "max"], "default": "max"},
+        },
+        "when_thinking_enabled": {"extra_body": {"thinking": {"type": "adaptive"}}},
+    },
+    "MiniMax-M3": {
+        "context_window": 1_000_000,
+        "max_tokens": 131_072,
+        "reasoning": {"thinking": "optional", "dialect": "none", "history": "preserve"},
+        "when_thinking_enabled": {"extra_body": {"thinking": {"type": "adaptive"}}},
+        "when_thinking_disabled": {"extra_body": {"thinking": {"type": "disabled"}}},
+    },
+}
 
 
 OPENAI_COMPAT_THINKING_CONFIG = {
@@ -419,9 +444,10 @@ LLM_PROVIDERS: list[LLMProvider] = [
         name="minimax",
         display_name="MiniMax",
         description="International OpenAI-compatible endpoint",
-        use="langchain_openai:ChatOpenAI",
-        models=["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
-        default_model="MiniMax-M3",
+        use="deerflow.models.patched_minimax:PatchedChatMiniMax",
+        models=["MiniMax-M3.1-Flash", "MiniMax-M3"],
+        default_model="MiniMax-M3.1-Flash",
+        model_config_overrides=MINIMAX_MODEL_CONFIGS,
         env_var="MINIMAX_API_KEY",
         package="langchain-openai",
         extra_config={
@@ -442,9 +468,10 @@ LLM_PROVIDERS: list[LLMProvider] = [
         name="minimax_cn",
         display_name="MiniMax CN",
         description="China OpenAI-compatible endpoint",
-        use="langchain_openai:ChatOpenAI",
-        models=["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
-        default_model="MiniMax-M3",
+        use="deerflow.models.patched_minimax:PatchedChatMiniMax",
+        models=["MiniMax-M3.1-Flash", "MiniMax-M3"],
+        default_model="MiniMax-M3.1-Flash",
+        model_config_overrides=MINIMAX_MODEL_CONFIGS,
         env_var="MINIMAX_API_KEY",
         package="langchain-openai",
         extra_config={

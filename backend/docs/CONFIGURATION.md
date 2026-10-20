@@ -230,35 +230,50 @@ models:
         thinking:
           type: enabled
 
+  - name: minimax-m3.1-flash
+    display_name: MiniMax M3.1 Flash
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
+    model: MiniMax-M3.1-Flash
+    api_key: $MINIMAX_API_KEY
+    base_url: https://api.minimax.io/v1  # China: https://api.minimaxi.com/v1
+    context_window: 1000000
+    max_tokens: 524288
+    temperature: 1.0
+    supports_vision: true
+    reasoning:
+      thinking: required
+      dialect: none
+      history: preserve
+      effort:
+        values: [low, medium, high, xhigh, max]
+        default: max
+    when_thinking_enabled:
+      extra_body:
+        thinking:
+          type: adaptive
+
   - name: minimax-m3
     display_name: MiniMax M3
-    use: langchain_openai:ChatOpenAI
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
     model: MiniMax-M3
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
-    max_tokens: 4096
-    temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
+    context_window: 1000000
+    max_tokens: 131072
+    temperature: 1.0
     supports_vision: true
-
-  - name: minimax-m2.7
-    display_name: MiniMax M2.7
-    use: langchain_openai:ChatOpenAI
-    model: MiniMax-M2.7
-    api_key: $MINIMAX_API_KEY
-    base_url: https://api.minimax.io/v1
-    max_tokens: 4096
-    temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
-    supports_vision: false  # M2.7 is text-only; M3 supports vision
-
-  - name: minimax-m2.7-highspeed
-    display_name: MiniMax M2.7 Highspeed
-    use: langchain_openai:ChatOpenAI
-    model: MiniMax-M2.7-highspeed
-    api_key: $MINIMAX_API_KEY
-    base_url: https://api.minimax.io/v1
-    max_tokens: 4096
-    temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
-    supports_vision: false  # M2.7 is text-only; M3 supports vision
+    reasoning:
+      thinking: optional
+      dialect: none
+      history: preserve
+    when_thinking_enabled:
+      extra_body:
+        thinking:
+          type: adaptive
+    when_thinking_disabled:
+      extra_body:
+        thinking:
+          type: disabled
   - name: openrouter-gemini-2.5-flash
     display_name: Gemini 2.5 Flash (OpenRouter)
     use: langchain_openai:ChatOpenAI
@@ -361,8 +376,17 @@ history and `max_tokens` must be preserved; this does not select a DeepSeek
 endpoint or infer DeepSeek capabilities for those vendors. MiniMax keeps its
 existing adapter for reasoning fields and user-message name normalization and
 uses its documented `max_tokens` wire parameter. MiniMax defaults to temperature
-1.0; Anthropic has a default output budget of 4096 because Messages requires an
-output cap. These request defaults are separate from model capability rules.
+1.0. The setup wizard offers MiniMax-M3.1-Flash first, followed by MiniMax-M3, for
+both direct API regions. Flash requires adaptive thinking and accepts effort
+`low`, `medium`, `high`, `xhigh`, or `max` (default); background callers asking to
+disable thinking are normalized to adaptive, and unsupported effort values use
+the declared default. M3 supports adaptive/disabled thinking without an effort
+parameter. Both profiles declare 1,000,000 context tokens; their output budgets
+are 524,288 (Flash) and 131,072 (M3). Explicit managed-profile limits take precedence.
+Saved model IDs and custom endpoints are not migrated, including legacy M2.x IDs.
+These direct API profiles do not establish gateway or subscription-plan support.
+Anthropic has a default output budget of 4096 because Messages requires an output
+cap. These request defaults are separate from model capability rules.
 
 To add a preset, append a stable ID and verified endpoint, adapter, protocol,
 authentication/SDK parameter mapping and required request defaults to `PROVIDERS`.

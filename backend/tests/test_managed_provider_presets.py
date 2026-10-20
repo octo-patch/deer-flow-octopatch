@@ -271,12 +271,21 @@ async def test_known_optional_thinking_disabled_only_for_probe(store, wire, prov
 
 
 @pytest.mark.asyncio
-async def test_required_thinking_uses_auto_selection_and_bounded_budget(store, wire):
-    profile = ManagedModel(provider="minimax", model="MiniMax-M2.7", api_key="secret-test-key")
+@pytest.mark.parametrize("provider", ["minimax", "minimax-cn"])
+@pytest.mark.parametrize("model", ["MiniMax-M2.7", "MiniMax-M3.1-Flash"])
+async def test_required_thinking_uses_auto_selection_and_bounded_budget(store, wire, provider, model):
+    profile = ManagedModel(provider=provider, model=model, api_key="secret-test-key")
     assert await router.test_model(_ADMIN, router.SaveModelRequest(config=profile)) == {"ok": True, "message": "success"}
-    body = wire.requests[0][1]
+    request, body = wire.requests[0]
+    assert request.url.host == ("api.minimaxi.com" if provider == "minimax-cn" else "api.minimax.io")
+    assert body["model"] == model
     assert body["tool_choice"] == "auto"
-    assert "thinking" not in body
+    if model == "MiniMax-M3.1-Flash":
+        assert body["thinking"] == {"type": "adaptive"}
+        assert body["reasoning_effort"] == "max"
+    else:
+        assert "thinking" not in body
+        assert "reasoning_effort" not in body
     assert body["max_tokens"] == 2048
 
 

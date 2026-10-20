@@ -27,6 +27,8 @@ from langchain_openai.chat_models.base import (
     _create_usage_metadata,
 )
 
+from deerflow.models.assistant_payload_replay import restore_assistant_payloads, restore_reasoning_content
+
 _THINK_TAG_RE = re.compile(r"<think>\s*(.*?)\s*</think>", re.DOTALL)
 
 
@@ -116,7 +118,9 @@ class PatchedChatMiniMax(ChatOpenAI):
         stop: list[str] | None = None,
         **kwargs: Any,
     ) -> dict:
-        payload = super()._get_request_payload(input_, stop=stop, **kwargs)
+        original_messages = self._convert_input(input_).to_messages()
+        payload = super()._get_request_payload(original_messages, stop=stop, **kwargs)
+        restore_assistant_payloads(payload.get("messages", []), original_messages, restore_reasoning_content)
         # MiniMax's documented OpenAI-compatible API takes max_tokens. Stock
         # ChatOpenAI renames it to OpenAI's newer max_completion_tokens, which
         # would lose the output bound on both probes and ordinary chat calls.
