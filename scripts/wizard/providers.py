@@ -23,6 +23,9 @@ class LLMProvider:
     # capability (e.g. MiniMax M3 supports vision but M2.7 is text-only). The
     # provider-level extra_config holds the default (default_model) capability.
     model_vision_overrides: dict[str, bool] = field(default_factory=dict)
+    # Per-model settings for providers whose reasoning contract or limits vary.
+    # ``None`` removes an inherited provider-level setting.
+    model_config_overrides: dict[str, dict] = field(default_factory=dict)
     auth_hint: str | None = None
     base_url_prompt: str | None = None
     model_prompt: str | None = None
@@ -38,6 +41,11 @@ class LLMProvider:
         config = dict(self.extra_config)
         if model_name in self.model_vision_overrides:
             config["supports_vision"] = self.model_vision_overrides[model_name]
+        for key, value in self.model_config_overrides.get(model_name, {}).items():
+            if value is None:
+                config.pop(key, None)
+            else:
+                config[key] = value
         return config
 
 
@@ -420,8 +428,8 @@ LLM_PROVIDERS: list[LLMProvider] = [
         display_name="MiniMax",
         description="International OpenAI-compatible endpoint",
         use="langchain_openai:ChatOpenAI",
-        models=["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
-        default_model="MiniMax-M3",
+        models=["MiniMax-M3.1-Flash", "MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
+        default_model="MiniMax-M3.1-Flash",
         env_var="MINIMAX_API_KEY",
         package="langchain-openai",
         extra_config={
@@ -430,12 +438,37 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "max_retries": 2,
             "max_tokens": 4096,
             "temperature": 1.0,
+            "context_window": 1_000_000,
             "supports_vision": True,
-            "supports_thinking": True,
+            "reasoning": {
+                "thinking": "required",
+                "dialect": "openai_extra_body",
+                "history": "preserve",
+                "effort": {
+                    "values": ["low", "medium", "high", "xhigh", "max"],
+                    "default": "max",
+                    "aliases": {"minimal": "low"},
+                },
+            },
+            "when_thinking_enabled": {"extra_body": {"thinking": {"type": "adaptive"}}},
         },
         model_vision_overrides={
             "MiniMax-M2.7": False,
             "MiniMax-M2.7-highspeed": False,
+        },
+        model_config_overrides={
+            "MiniMax-M3": {
+                "reasoning": {"thinking": "optional", "dialect": "openai_extra_body", "history": "preserve"},
+                "when_thinking_disabled": {"extra_body": {"thinking": {"type": "disabled"}}},
+            },
+            "MiniMax-M2.7": {
+                "reasoning": {"thinking": "required", "dialect": "none", "history": "preserve"},
+                "when_thinking_enabled": None,
+            },
+            "MiniMax-M2.7-highspeed": {
+                "reasoning": {"thinking": "required", "dialect": "none", "history": "preserve"},
+                "when_thinking_enabled": None,
+            },
         },
     ),
     LLMProvider(
@@ -443,8 +476,8 @@ LLM_PROVIDERS: list[LLMProvider] = [
         display_name="MiniMax CN",
         description="China OpenAI-compatible endpoint",
         use="langchain_openai:ChatOpenAI",
-        models=["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
-        default_model="MiniMax-M3",
+        models=["MiniMax-M3.1-Flash", "MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
+        default_model="MiniMax-M3.1-Flash",
         env_var="MINIMAX_API_KEY",
         package="langchain-openai",
         extra_config={
@@ -453,12 +486,37 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "max_retries": 2,
             "max_tokens": 4096,
             "temperature": 1.0,
+            "context_window": 1_000_000,
             "supports_vision": True,
-            "supports_thinking": True,
+            "reasoning": {
+                "thinking": "required",
+                "dialect": "openai_extra_body",
+                "history": "preserve",
+                "effort": {
+                    "values": ["low", "medium", "high", "xhigh", "max"],
+                    "default": "max",
+                    "aliases": {"minimal": "low"},
+                },
+            },
+            "when_thinking_enabled": {"extra_body": {"thinking": {"type": "adaptive"}}},
         },
         model_vision_overrides={
             "MiniMax-M2.7": False,
             "MiniMax-M2.7-highspeed": False,
+        },
+        model_config_overrides={
+            "MiniMax-M3": {
+                "reasoning": {"thinking": "optional", "dialect": "openai_extra_body", "history": "preserve"},
+                "when_thinking_disabled": {"extra_body": {"thinking": {"type": "disabled"}}},
+            },
+            "MiniMax-M2.7": {
+                "reasoning": {"thinking": "required", "dialect": "none", "history": "preserve"},
+                "when_thinking_enabled": None,
+            },
+            "MiniMax-M2.7-highspeed": {
+                "reasoning": {"thinking": "required", "dialect": "none", "history": "preserve"},
+                "when_thinking_enabled": None,
+            },
         },
     ),
     LLMProvider(

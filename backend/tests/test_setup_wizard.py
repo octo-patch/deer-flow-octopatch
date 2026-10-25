@@ -131,7 +131,7 @@ class TestProviders:
         assert background.reasoning_effort == "high"
 
     def test_minimax_vision_is_per_model(self):
-        """M3 supports vision; M2.7 variants are text-only.
+        """Flash and M3 support vision; M2.7 variants are text-only.
 
         The provider-level extra_config carries the default (M3) capability, but
         extra_config_for() must drop vision when an M2.7 model is selected.
@@ -141,11 +141,43 @@ class TestProviders:
         for name in ("minimax", "minimax_cn"):
             provider = providers[name]
             assert provider.extra_config["supports_vision"] is True
+            assert provider.default_model == "MiniMax-M3.1-Flash"
+            assert provider.models[:2] == ["MiniMax-M3.1-Flash", "MiniMax-M3"]
+            assert provider.extra_config["context_window"] == 1_000_000
+            assert provider.extra_config["reasoning"]["thinking"] == "required"
+            assert provider.extra_config["reasoning"]["effort"]["default"] == "max"
+            assert provider.extra_config_for("MiniMax-M3.1-Flash")["reasoning"]["thinking"] == "required"
             assert provider.extra_config_for("MiniMax-M3")["supports_vision"] is True
+            assert provider.extra_config_for("MiniMax-M3")["reasoning"]["thinking"] == "optional"
+            assert provider.extra_config_for("MiniMax-M3")["when_thinking_disabled"] == {
+                "extra_body": {"thinking": {"type": "disabled"}}
+            }
             assert provider.extra_config_for("MiniMax-M2.7")["supports_vision"] is False
             assert provider.extra_config_for("MiniMax-M2.7-highspeed")["supports_vision"] is False
+            assert provider.extra_config_for("MiniMax-M2.7")["reasoning"]["thinking"] == "required"
             # Override must not mutate the shared provider-level config.
             assert provider.extra_config["supports_vision"] is True
+
+    def test_minimax_generated_config_preserves_model_specific_limits(self):
+        from wizard.writer import build_minimal_config
+
+        providers = {provider.name: provider for provider in LLM_PROVIDERS}
+        for name, endpoint in (("minimax", "https://api.minimax.io/v1"), ("minimax_cn", "https://api.minimaxi.com/v1")):
+            provider = providers[name]
+            model = yaml.safe_load(
+                build_minimal_config(
+                    provider_use=provider.use,
+                    model_name=provider.default_model,
+                    display_name=provider.display_name,
+                    api_key_field=provider.api_key_field,
+                    env_var=provider.env_var,
+                    extra_model_config=provider.extra_config_for(provider.default_model),
+                )
+            )["models"][0]
+            assert model["model"] == "MiniMax-M3.1-Flash"
+            assert model["base_url"] == endpoint
+            assert model["context_window"] == 1_000_000
+            assert model["reasoning"]["effort"]["values"] == ["low", "medium", "high", "xhigh", "max"]
 
     def test_extra_config_for_returns_provider_config_without_override(self):
         """Providers without per-model overrides return their config unchanged."""
