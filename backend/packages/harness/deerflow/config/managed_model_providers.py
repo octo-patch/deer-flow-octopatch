@@ -126,6 +126,13 @@ def _capabilities(provider: str, model: str) -> dict[str, Any]:
             when_thinking_enabled={"extra_body": {"thinking": {"type": "adaptive"}}},
             when_thinking_disabled={"extra_body": {"thinking": {"type": "disabled"}}},
         )
+        result["reasoning"]["effort"] = {"values": ["low", "medium", "high", "xhigh", "max"], "default": "max"}
+    elif provider in {"minimax", "minimax-cn"} and model == "MiniMax-M3.1-Flash":
+        result.update(
+            supports_vision=True,
+            reasoning={"thinking": "required", "dialect": "none", "history": "preserve"},
+        )
+        result["reasoning"]["effort"] = {"values": ["low", "medium", "high", "xhigh", "max"], "default": "max"}
     return result
 
 
