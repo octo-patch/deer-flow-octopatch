@@ -3,10 +3,15 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
-from typing import Optional
+from pathlib import Path
+
+PNPM_SCRIPT_PATH = Path(__file__).resolve().with_name("pnpm.py")
+FRONTEND_DIR = PNPM_SCRIPT_PATH.parent.parent / "frontend"
+COREPACK_NOTICE = "Using pnpm via Corepack."
 
 
 def configure_stdio() -> None:
@@ -20,28 +25,58 @@ def configure_stdio() -> None:
                 continue
 
 
-def run_command(command: list[str]) -> Optional[str]:
+def run_command(command: list[str]) -> str | None:
     """Run a command and return trimmed stdout, or None on failure."""
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True, shell=False)
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=True,
+            shell=False,
+        )
     except (OSError, subprocess.CalledProcessError):
         return None
     return result.stdout.strip() or result.stderr.strip()
 
 
-def find_pnpm_command() -> Optional[list[str]]:
-    """Return a pnpm-compatible command that exists on this machine."""
-    candidates = [["pnpm"], ["pnpm.cmd"]]
-    if shutil.which("corepack"):
-        candidates.append(["corepack", "pnpm"])
+def run_pnpm_version() -> tuple[str | None, bool, str | None]:
+    """Return the pnpm version, resolution source, and failure message."""
+    try:
+        result = subprocess.run(
+            [sys.executable, str(PNPM_SCRIPT_PATH), "-v"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8:backslashreplace"},
+            check=False,
+            shell=False,
+            cwd=FRONTEND_DIR,
+        )
+    except OSError as exc:
+        return None, False, f"Unable to launch the pnpm runner: {exc}"
 
-    for command in candidates:
-        if shutil.which(command[0]):
-            return command
-    return None
+    stdout = result.stdout.strip()
+    stderr_lines = result.stderr.splitlines()
+    via_corepack = COREPACK_NOTICE in stderr_lines
+    stderr = "\n".join(line for line in stderr_lines if line != COREPACK_NOTICE).strip()
+    if result.returncode == 0 and (stdout or stderr):
+        return stdout or stderr, via_corepack, None
+
+    diagnostics = "\n".join(part for part in (stderr, stdout) if part)
+    if diagnostics:
+        return None, via_corepack, diagnostics
+    return (
+        None,
+        via_corepack,
+        f"The pnpm runner exited with status {result.returncode} without output.",
+    )
 
 
-def parse_node_major(version_text: str) -> Optional[int]:
+def parse_node_major(version_text: str) -> int | None:
     version = version_text.strip()
     if version.startswith("v"):
         version = version[1:]
@@ -72,35 +107,31 @@ def main() -> int:
                 print(
                     f"  FAIL Node.js {node_version.lstrip('v')} found, but version 22+ is required"
                 )
-                print("    Install from: https://nodejs.org/")
+                print("    With nvm: nvm install 22 && nvm use 22")
+                print("    Other install methods: https://nodejs.org/en/download")
                 failed = True
         else:
             print("  INFO Unable to determine Node.js version")
-            print("    Install from: https://nodejs.org/")
+            print("    With nvm: nvm install 22 && nvm use 22")
+            print("    Other install methods: https://nodejs.org/en/download")
             failed = True
     else:
         print("  FAIL Node.js not found (version 22+ required)")
-        print("    Install from: https://nodejs.org/")
+        print("    With nvm: nvm install 22 && nvm use 22")
+        print("    Other install methods: https://nodejs.org/en/download")
         failed = True
 
     print()
     print("Checking pnpm...")
-    pnpm_command = find_pnpm_command()
-    if pnpm_command:
-        pnpm_version = run_command([*pnpm_command, "-v"])
-        if pnpm_version:
-            if pnpm_command[0] == "corepack":
-                print(f"  OK pnpm {pnpm_version} (via Corepack)")
-            else:
-                print(f"  OK pnpm {pnpm_version}")
-        else:
-            print("  INFO Unable to determine pnpm version")
-            failed = True
+    pnpm_version, pnpm_via_corepack, pnpm_error = run_pnpm_version()
+    if pnpm_version:
+        resolution_hint = " (via Corepack)" if pnpm_via_corepack else ""
+        print(f"  OK pnpm {pnpm_version}{resolution_hint}")
     else:
-        print("  FAIL pnpm not found")
-        print("    Install: npm install -g pnpm")
-        print("    Or enable Corepack: corepack enable")
-        print("    Or visit: https://pnpm.io/installation")
+        print("  FAIL pnpm is unavailable or failed to run")
+        if pnpm_error:
+            for line in pnpm_error.splitlines():
+                print(f"    {line}")
         failed = True
 
     print()
@@ -109,7 +140,9 @@ def main() -> int:
         uv_version_text = run_command(["uv", "--version"])
         if uv_version_text:
             uv_version_parts = uv_version_text.split()
-            uv_version = uv_version_parts[1] if len(uv_version_parts) > 1 else uv_version_text
+            uv_version = (
+                uv_version_parts[1] if len(uv_version_parts) > 1 else uv_version_text
+            )
             print(f"  OK uv {uv_version}")
         else:
             print("  INFO Unable to determine uv version")
@@ -145,7 +178,9 @@ def main() -> int:
         print()
         print("You can now run:")
         print("  make install  - Install project dependencies")
-        print("  make config   - Generate local config files")
+        print("  make setup    - Create a minimal working config (recommended)")
+        print("  make config   - Copy the full config template (manual setup)")
+        print("  make doctor   - Verify config and dependency health")
         print("  make dev      - Start development server")
         print("  make start    - Start production server")
         return 0
