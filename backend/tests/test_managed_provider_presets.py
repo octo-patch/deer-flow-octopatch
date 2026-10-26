@@ -48,6 +48,26 @@ def test_preset_routing_and_conservative_unknown_capabilities(provider, endpoint
     assert config.context_window is None
 
 
+@pytest.mark.parametrize("provider", ["minimax", "minimax-cn"])
+def test_minimax_flash_capabilities_are_model_specific(provider):
+    flash = ManagedModel(provider=provider, model="MiniMax-M3.1-Flash", api_key="test-key").runtime_config()
+    m3 = ManagedModel(provider=provider, model="MiniMax-M3", api_key="test-key").runtime_config()
+
+    assert flash.supports_vision is True
+    assert flash.context_window == 1_000_000
+    assert flash.supports_thinking is True
+    assert flash.supports_reasoning_effort is True
+    assert flash.reasoning.effort.values == ["low", "medium", "high", "xhigh", "max"]
+    assert flash.reasoning.effort.default == "max"
+    assert flash.reasoning.effort.path == "reasoning_effort"
+    assert flash.when_thinking_enabled is None
+    assert flash.when_thinking_disabled is None
+
+    assert m3.supports_vision is True
+    assert m3.context_window == 1_000_000
+    assert m3.supports_reasoning_effort is False
+
+
 def test_automatic_names_are_valid_unique_and_stable(store):
     for model in ["a/b c 中文", "中" * 200, "same", "same"]:
         saved = store.save(ManagedModel(provider="openai", model=model, api_key="test"), expected_revision=None)

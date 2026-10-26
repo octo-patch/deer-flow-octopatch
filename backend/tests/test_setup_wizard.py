@@ -140,7 +140,10 @@ class TestProviders:
 
         for name in ("minimax", "minimax_cn"):
             provider = providers[name]
+            assert provider.models[:2] == ["MiniMax-M3.1-Flash", "MiniMax-M3"]
+            assert provider.default_model == "MiniMax-M3.1-Flash"
             assert provider.extra_config["supports_vision"] is True
+            assert provider.extra_config_for("MiniMax-M3.1-Flash")["supports_vision"] is True
             assert provider.extra_config_for("MiniMax-M3")["supports_vision"] is True
             assert provider.extra_config_for("MiniMax-M2.7")["supports_vision"] is False
             assert provider.extra_config_for("MiniMax-M2.7-highspeed")["supports_vision"] is False
