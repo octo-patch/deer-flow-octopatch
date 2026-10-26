@@ -141,6 +141,21 @@ class TestProviders:
         for name in ("minimax", "minimax_cn"):
             provider = providers[name]
             assert provider.extra_config["supports_vision"] is True
+            assert provider.default_model == "MiniMax-M3.1-Flash"
+            assert provider.models[:2] == ["MiniMax-M3.1-Flash", "MiniMax-M3"]
+            flash = provider.extra_config_for("MiniMax-M3.1-Flash")
+            assert flash["context_window"] == 1_000_000
+            assert flash["max_tokens"] == 131_072
+            assert flash["reasoning"] == {
+                "thinking": "required",
+                "dialect": "none",
+                "history": "preserve",
+                "effort": {"values": ["low", "medium", "high", "xhigh", "max"], "default": "max"},
+            }
+            assert "when_thinking_disabled" not in flash
+            m3 = provider.extra_config_for("MiniMax-M3")
+            assert m3["reasoning"] == {"thinking": "optional", "dialect": "none", "history": "preserve"}
+            assert m3["when_thinking_disabled"] == {"extra_body": {"thinking": {"type": "disabled"}}}
             assert provider.extra_config_for("MiniMax-M3")["supports_vision"] is True
             assert provider.extra_config_for("MiniMax-M2.7")["supports_vision"] is False
             assert provider.extra_config_for("MiniMax-M2.7-highspeed")["supports_vision"] is False

@@ -232,15 +232,46 @@ models:
         thinking:
           type: enabled
 
+  - name: minimax-m3.1-flash
+    display_name: MiniMax M3.1 Flash
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
+    model: MiniMax-M3.1-Flash
+    api_key: $MINIMAX_API_KEY
+    base_url: https://api.minimax.io/v1
+    max_tokens: 131072
+    context_window: 1000000
+    temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
+    supports_vision: true
+    reasoning:
+      thinking: required
+      dialect: none
+      history: preserve
+      effort:
+        values: [low, medium, high, xhigh, max]
+        default: max
+
   - name: minimax-m3
     display_name: MiniMax M3
     use: langchain_openai:ChatOpenAI
     model: MiniMax-M3
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
-    max_tokens: 4096
+    max_tokens: 131072
+    context_window: 1000000
     temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
     supports_vision: true
+    reasoning:
+      thinking: optional
+      dialect: none
+      history: preserve
+    when_thinking_enabled:
+      extra_body:
+        thinking:
+          type: adaptive
+    when_thinking_disabled:
+      extra_body:
+        thinking:
+          type: disabled
 
   - name: minimax-m2.7
     display_name: MiniMax M2.7
@@ -336,6 +367,15 @@ presets do not route China keys to international endpoints or infer a Coding
 Plan from the model name. Plans/regions without a preset can use the custom
 OpenAI-compatible option if their documented protocol is compatible; native
 protocols need a verified backend preset or operator YAML configuration.
+
+The `minimax` and `minimax-cn` presets recognize the exact `MiniMax-M3.1-Flash`
+and `MiniMax-M3` IDs with multimodal input, a 1,000,000-token context window,
+and a 131,072-token default output cap. `MiniMax-M3.1-Flash` always thinks and
+accepts native `reasoning_effort` values `low`, `medium`, `high`, `xhigh`, and
+`max` (default `max`); disabling thinking is not sent because the provider
+rejects it. `MiniMax-M3` keeps adaptive/disabled thinking behavior and does not
+advertise effort controls. Unknown IDs and legacy M2.7 profiles retain their
+existing conservative/custom behavior.
 
 Endpoint/auth sources used for these presets include the official
 [OpenAI SDK](https://github.com/openai/openai-python/blob/main/src/openai/_client.py),
