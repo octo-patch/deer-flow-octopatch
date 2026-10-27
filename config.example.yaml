@@ -572,8 +572,27 @@ models:
   #       reasoning_format: deepseek-style
 
   # Example: MiniMax (OpenAI-compatible) - International Edition
-  # MiniMax provides high-performance models with 512K context window and 128K max output
+  # MiniMax provides high-performance models with a 1M context window.
   # Docs: https://platform.minimax.io/docs/api-reference/text-openai-api
+  # - name: minimax-m3-1-flash
+  #   display_name: MiniMax M3.1 Flash
+  #   use: deerflow.models.patched_minimax:PatchedChatMiniMax
+  #   model: MiniMax-M3.1-Flash
+  #   api_key: $MINIMAX_API_KEY
+  #   base_url: https://api.minimax.io/v1
+  #   request_timeout: 600.0
+  #   max_retries: 2
+  #   max_tokens: 4096
+  #   temperature: 1.0
+  #   context_window: 1000000
+  #   supports_vision: true
+  #   reasoning:
+  #     thinking: required
+  #     dialect: none
+  #     history: preserve
+  #     effort:
+  #       values: [low, medium, high, xhigh, max]
+  #       default: max
   # - name: minimax-m3
   #   display_name: MiniMax M3
   #   use: deerflow.models.patched_minimax:PatchedChatMiniMax
@@ -637,8 +656,27 @@ models:
   #   supports_thinking: true
 
   # Example: MiniMax (OpenAI-compatible) - CN 中国区用户
-  # MiniMax provides high-performance models with 512K context window and 128K max output
+  # MiniMax provides high-performance models with a 1M context window.
   # Docs: https://platform.minimaxi.com/docs/api-reference/text-openai-api
+  # - name: minimax-m3-1-flash
+  #   display_name: MiniMax M3.1 Flash
+  #   use: deerflow.models.patched_minimax:PatchedChatMiniMax
+  #   model: MiniMax-M3.1-Flash
+  #   api_key: $MINIMAX_API_KEY
+  #   base_url: https://api.minimaxi.com/v1
+  #   request_timeout: 600.0
+  #   max_retries: 2
+  #   max_tokens: 4096
+  #   temperature: 1.0
+  #   context_window: 1000000
+  #   supports_vision: true
+  #   reasoning:
+  #     thinking: required
+  #     dialect: none
+  #     history: preserve
+  #     effort:
+  #       values: [low, medium, high, xhigh, max]
+  #       default: max
   # - name: minimax-m3
   #   display_name: MiniMax M3
   #   use: deerflow.models.patched_minimax:PatchedChatMiniMax

@@ -362,6 +362,15 @@ does not add video UI support. See the official
 [K3.1 quickstart](https://platform.kimi.com/docs/guide/kimi-k3-1-pro-quickstart)
 and [model parameter reference](https://platform.kimi.com/docs/api/models-overview).
 
+The `minimax` and `minimax-cn` presets recognize `MiniMax-M3.1-Flash` in
+addition to `MiniMax-M3`. The Flash model has a 1,000,000-token context window,
+supports text, image and video inputs, requires adaptive thinking, and accepts
+only the native `low`, `medium`, `high`, `xhigh` and `max` effort values (`max`
+is the default). It does not advertise service-tier selection. `MiniMax-M3`
+remains optional-thinking with its existing adaptive/disabled templates and no
+effort vocabulary. Existing saved model overrides and custom OpenAI-compatible
+endpoints remain authoritative; unknown IDs keep conservative capabilities.
+
 Endpoint/auth sources used for these presets include the official
 [OpenAI SDK](https://github.com/openai/openai-python/blob/main/src/openai/_client.py),
 [Anthropic SDK](https://github.com/anthropics/anthropic-sdk-python/blob/main/src/anthropic/_client.py),
