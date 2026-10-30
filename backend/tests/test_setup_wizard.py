@@ -144,6 +144,13 @@ class TestProviders:
             assert provider.default_model == "MiniMax-M3.1-Flash"
             flash = provider.extra_config_for("MiniMax-M3.1-Flash")
             assert flash["context_window"] == 1_000_000
+            assert "max_tokens" not in flash
+            assert flash["pricing"] == {
+                "currency": "USD",
+                "input_per_million": 0.15,
+                "output_per_million": 0.6,
+                "input_cache_hit_per_million": 0.015,
+            }
             assert flash["reasoning"] == {
                 "thinking": "required",
                 "dialect": "none",
@@ -155,6 +162,8 @@ class TestProviders:
             m3 = provider.extra_config_for("MiniMax-M3")
             assert m3["supports_vision"] is True
             assert m3["context_window"] == 1_000_000
+            assert "max_tokens" not in m3
+            assert "pricing" not in m3
             assert m3["reasoning"] == {"thinking": "optional", "dialect": "none", "history": "preserve"}
             assert m3["when_thinking_enabled"] == {"extra_body": {"thinking": {"type": "adaptive"}}}
             assert m3["when_thinking_disabled"] == {"extra_body": {"thinking": {"type": "disabled"}}}
@@ -162,6 +171,8 @@ class TestProviders:
                 legacy = provider.extra_config_for(model)
                 assert legacy["supports_vision"] is False
                 assert "context_window" not in legacy
+                assert "pricing" not in legacy
+                assert legacy["max_tokens"] == 4096
                 assert legacy["reasoning"] == {"thinking": "required", "dialect": "none", "history": "preserve"}
             # Override must not mutate the shared provider-level config.
             assert provider.extra_config["supports_vision"] is True

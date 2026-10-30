@@ -130,6 +130,7 @@ def _capabilities(provider: str, model: str) -> dict[str, Any]:
         result.update(
             supports_vision=True,
             context_window=1_000_000,
+            pricing={"currency": "USD", "input_per_million": 0.15, "output_per_million": 0.6, "input_cache_hit_per_million": 0.015},
             reasoning={
                 "thinking": "required",
                 "dialect": "none",

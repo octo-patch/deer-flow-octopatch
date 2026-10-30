@@ -158,6 +158,12 @@ def test_minimax_m31_and_m3_have_exact_capabilities(provider):
     assert flash.reasoning.effort.values == ["low", "medium", "high", "xhigh", "max"]
     assert flash.reasoning.effort.default == "max"
     assert flash.when_thinking_enabled == {"extra_body": {"thinking": {"type": "adaptive"}}}
+    assert flash.model_extra["pricing"] == {
+        "currency": "USD",
+        "input_per_million": 0.15,
+        "output_per_million": 0.6,
+        "input_cache_hit_per_million": 0.015,
+    }
 
     m3 = ManagedModel(provider=provider, model="MiniMax-M3", api_key="test").runtime_config()
     assert m3.context_window == 1_000_000

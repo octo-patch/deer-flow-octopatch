@@ -243,8 +243,12 @@ models:
     model: MiniMax-M3.1-Flash
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
-    max_tokens: 4096
     context_window: 1000000
+    pricing:
+      currency: USD
+      input_per_million: 0.15
+      output_per_million: 0.6
+      input_cache_hit_per_million: 0.015
     temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
     supports_vision: true
     reasoning:
@@ -265,7 +269,6 @@ models:
     model: MiniMax-M3
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
-    max_tokens: 4096
     context_window: 1000000
     temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
     supports_vision: true

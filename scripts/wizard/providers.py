@@ -441,6 +441,7 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "max_tokens": 4096,
             "temperature": 1.0,
             "context_window": 1_000_000,
+            "pricing": {"currency": "USD", "input_per_million": 0.15, "output_per_million": 0.6, "input_cache_hit_per_million": 0.015},
             "supports_vision": True,
             "reasoning": {
                 "thinking": "required",
@@ -464,8 +465,10 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "MiniMax-M2.7-highspeed": False,
         },
         model_omitted_config={
-            "MiniMax-M2.7": ("context_window",),
-            "MiniMax-M2.7-highspeed": ("context_window",),
+            "MiniMax-M3.1-Flash": ("max_tokens",),
+            "MiniMax-M3": ("max_tokens", "pricing"),
+            "MiniMax-M2.7": ("context_window", "pricing"),
+            "MiniMax-M2.7-highspeed": ("context_window", "pricing"),
         },
     ),
     LLMProvider(
@@ -484,6 +487,7 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "max_tokens": 4096,
             "temperature": 1.0,
             "context_window": 1_000_000,
+            "pricing": {"currency": "USD", "input_per_million": 0.15, "output_per_million": 0.6, "input_cache_hit_per_million": 0.015},
             "supports_vision": True,
             "reasoning": {
                 "thinking": "required",
@@ -507,8 +511,10 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "MiniMax-M2.7-highspeed": False,
         },
         model_omitted_config={
-            "MiniMax-M2.7": ("context_window",),
-            "MiniMax-M2.7-highspeed": ("context_window",),
+            "MiniMax-M3.1-Flash": ("max_tokens",),
+            "MiniMax-M3": ("max_tokens", "pricing"),
+            "MiniMax-M2.7": ("context_window", "pricing"),
+            "MiniMax-M2.7-highspeed": ("context_window", "pricing"),
         },
     ),
     LLMProvider(
