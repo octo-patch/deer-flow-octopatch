@@ -130,20 +130,39 @@ class TestProviders:
         background = resolve_reasoning_request(contract, thinking_enabled=False, reasoning_effort=None)
         assert background.reasoning_effort == "high"
 
-    def test_minimax_vision_is_per_model(self):
-        """M3 supports vision; M2.7 variants are text-only.
+    def test_minimax_capabilities_are_per_model(self):
+        """The regional presets keep model-specific reasoning and media limits.
 
-        The provider-level extra_config carries the default (M3) capability, but
-        extra_config_for() must drop vision when an M2.7 model is selected.
+        The provider-level config describes the default M3.1 Flash model, while
+        extra_config_for() must retain M3 toggles and M2.7's text-only behavior.
         """
         providers = {provider.name: provider for provider in LLM_PROVIDERS}
 
         for name in ("minimax", "minimax_cn"):
             provider = providers[name]
+            assert provider.use == "deerflow.models.patched_minimax:PatchedChatMiniMax"
+            assert provider.default_model == "MiniMax-M3.1-Flash"
+            flash = provider.extra_config_for("MiniMax-M3.1-Flash")
+            assert flash["context_window"] == 1_000_000
+            assert flash["reasoning"] == {
+                "thinking": "required",
+                "dialect": "none",
+                "history": "preserve",
+                "effort": {"values": ["low", "medium", "high", "xhigh", "max"], "default": "max"},
+            }
+            assert flash["when_thinking_enabled"] == {"extra_body": {"thinking": {"type": "adaptive"}}}
             assert provider.extra_config["supports_vision"] is True
-            assert provider.extra_config_for("MiniMax-M3")["supports_vision"] is True
-            assert provider.extra_config_for("MiniMax-M2.7")["supports_vision"] is False
-            assert provider.extra_config_for("MiniMax-M2.7-highspeed")["supports_vision"] is False
+            m3 = provider.extra_config_for("MiniMax-M3")
+            assert m3["supports_vision"] is True
+            assert m3["context_window"] == 1_000_000
+            assert m3["reasoning"] == {"thinking": "optional", "dialect": "none", "history": "preserve"}
+            assert m3["when_thinking_enabled"] == {"extra_body": {"thinking": {"type": "adaptive"}}}
+            assert m3["when_thinking_disabled"] == {"extra_body": {"thinking": {"type": "disabled"}}}
+            for model in ("MiniMax-M2.7", "MiniMax-M2.7-highspeed"):
+                legacy = provider.extra_config_for(model)
+                assert legacy["supports_vision"] is False
+                assert "context_window" not in legacy
+                assert legacy["reasoning"] == {"thinking": "required", "dialect": "none", "history": "preserve"}
             # Override must not mutate the shared provider-level config.
             assert provider.extra_config["supports_vision"] is True
 

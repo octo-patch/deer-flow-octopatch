@@ -280,6 +280,12 @@ fences, including unclosed fences, in complete and streamed replies.
    [model registration reference](backend/docs/CONFIGURATION.md#models-registered-through-the-web)
    for the image-input and parameter constraints.
 
+   The two direct MiniMax regional presets recognize `MiniMax-M3.1-Flash` with
+   a one-million-token context window, required adaptive reasoning, and native
+   `low` / `medium` / `high` / `xhigh` / `max` effort (default `max`).
+   `MiniMax-M3` remains available with optional adaptive reasoning and the same
+   context window.
+
    **Custom OpenAI-compatible** still supports existing/custom base URLs and
    unauthenticated endpoints. **Advanced settings** retains display name, token
    limits and vision overrides; unknown IDs do not receive invented capabilities.

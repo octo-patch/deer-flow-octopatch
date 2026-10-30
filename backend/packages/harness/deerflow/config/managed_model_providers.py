@@ -13,6 +13,7 @@ _OPENAI = "langchain_openai:ChatOpenAI"
 _DEEPSEEK = "deerflow.models.patched_deepseek:PatchedChatDeepSeek"
 _MINIMAX = "deerflow.models.patched_minimax:PatchedChatMiniMax"
 MOONSHOT_K31_MODELS = frozenset({"kimi-k3.1-pro", "kimi-k3.1-pro-highspeed"})
+MINIMAX_M31_MODELS = frozenset({"MiniMax-M3.1-Flash"})
 
 
 @dataclass(frozen=True)
@@ -125,9 +126,22 @@ def _capabilities(provider: str, model: str) -> dict[str, Any]:
         )
     elif provider in {"minimax", "minimax-cn"} and model in {"MiniMax-M2.7", "MiniMax-M2.7-highspeed"}:
         result["reasoning"] = {"thinking": "required", "dialect": "none", "history": "preserve"}
+    elif provider in {"minimax", "minimax-cn"} and model in MINIMAX_M31_MODELS:
+        result.update(
+            supports_vision=True,
+            context_window=1_000_000,
+            reasoning={
+                "thinking": "required",
+                "dialect": "none",
+                "history": "preserve",
+                "effort": {"values": ["low", "medium", "high", "xhigh", "max"], "default": "max"},
+            },
+            when_thinking_enabled={"extra_body": {"thinking": {"type": "adaptive"}}},
+        )
     elif provider in {"minimax", "minimax-cn"} and model == "MiniMax-M3":
         result.update(
             supports_vision=True,
+            context_window=1_000_000,
             reasoning={"thinking": "optional", "dialect": "none", "history": "preserve"},
             when_thinking_enabled={"extra_body": {"thinking": {"type": "adaptive"}}},
             when_thinking_disabled={"extra_body": {"thinking": {"type": "disabled"}}},

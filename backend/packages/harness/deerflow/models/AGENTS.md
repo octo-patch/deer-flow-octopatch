@@ -252,6 +252,13 @@ levels without mutating caller mappings; the SDK merges `extra_body` last.
 Keep K2.5, unknown IDs and other endpoints unchanged. Offline SDK coverage:
 `tests/test_managed_moonshot.py`; live acceptance is a separate validation.
 
+MiniMax's exact `MiniMax-M3.1-Flash` preset uses both official regional
+endpoints with a one-million-token context window, required adaptive thinking, preserved
+reasoning history, and native `low`/`medium`/`high`/`xhigh`/`max` effort
+(default `max`). `MiniMax-M3` keeps optional adaptive/disabled thinking and no
+effort control, with the same context window. Unknown IDs and custom endpoints
+remain conservative, and saved administrator overrides remain authoritative.
+
 The admin-only `/api/managed-models/providers` exposes form metadata, not routing.
 Full updates require the current revision. Omitted keys are retained only for
 an unchanged provider/custom endpoint, an empty string clears the key and password

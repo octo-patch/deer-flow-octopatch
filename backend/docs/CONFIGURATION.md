@@ -237,19 +237,54 @@ models:
         thinking:
           type: enabled
 
+  - name: minimax-m3-1-flash
+    display_name: MiniMax M3.1 Flash
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
+    model: MiniMax-M3.1-Flash
+    api_key: $MINIMAX_API_KEY
+    base_url: https://api.minimax.io/v1
+    max_tokens: 4096
+    context_window: 1000000
+    temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
+    supports_vision: true
+    reasoning:
+      thinking: required
+      dialect: none
+      history: preserve
+      effort:
+        values: [low, medium, high, xhigh, max]
+        default: max
+    when_thinking_enabled:
+      extra_body:
+        thinking:
+          type: adaptive
+
   - name: minimax-m3
     display_name: MiniMax M3
-    use: langchain_openai:ChatOpenAI
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
     model: MiniMax-M3
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
     max_tokens: 4096
+    context_window: 1000000
     temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
     supports_vision: true
+    reasoning:
+      thinking: optional
+      dialect: none
+      history: preserve
+    when_thinking_enabled:
+      extra_body:
+        thinking:
+          type: adaptive
+    when_thinking_disabled:
+      extra_body:
+        thinking:
+          type: disabled
 
   - name: minimax-m2.7
     display_name: MiniMax M2.7
-    use: langchain_openai:ChatOpenAI
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
     model: MiniMax-M2.7
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
@@ -259,7 +294,7 @@ models:
 
   - name: minimax-m2.7-highspeed
     display_name: MiniMax M2.7 Highspeed
-    use: langchain_openai:ChatOpenAI
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
     model: MiniMax-M2.7-highspeed
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
@@ -361,6 +396,15 @@ public image URLs; DeerFlow's image middleware uses base64. This declaration
 does not add video UI support. See the official
 [K3.1 quickstart](https://platform.kimi.com/docs/guide/kimi-k3-1-pro-quickstart)
 and [model parameter reference](https://platform.kimi.com/docs/api/models-overview).
+
+The `minimax` and `minimax-cn` presets recognize the exact
+`MiniMax-M3.1-Flash` ID. It has a one-million-token context window, required
+adaptive thinking, preserved reasoning history, and native top-level `reasoning_effort`
+values `low`, `medium`, `high`, `xhigh` and `max`, with `max` as the default.
+The existing `MiniMax-M3` preset has the same context window but keeps optional
+adaptive/disabled thinking and exposes no effort selector. Both presets retain
+image input support. Unknown IDs and custom endpoints remain conservative, and
+administrator-saved context/output overrides remain authoritative.
 
 Endpoint/auth sources used for these presets include the official
 [OpenAI SDK](https://github.com/openai/openai-python/blob/main/src/openai/_client.py),

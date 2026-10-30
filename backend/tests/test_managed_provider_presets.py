@@ -35,6 +35,7 @@ def store(tmp_path, monkeypatch):
         ("moonshot-cn", "https://api.moonshot.cn/v1", "deerflow.models.patched_deepseek:PatchedChatDeepSeek"),
         ("zai", "https://api.z.ai/api/paas/v4", "deerflow.models.patched_deepseek:PatchedChatDeepSeek"),
         ("minimax", "https://api.minimax.io/v1", "deerflow.models.patched_minimax:PatchedChatMiniMax"),
+        ("minimax-cn", "https://api.minimaxi.com/v1", "deerflow.models.patched_minimax:PatchedChatMiniMax"),
     ],
 )
 def test_preset_routing_and_conservative_unknown_capabilities(provider, endpoint, adapter):
@@ -145,6 +146,42 @@ def test_preset_overrides_and_injected_config_remain_authoritative(store):
     finally:
         reset_app_config()
     assert store.list()[0].name == saved.name
+
+
+@pytest.mark.parametrize("provider", ["minimax", "minimax-cn"])
+def test_minimax_m31_and_m3_have_exact_capabilities(provider):
+    flash = ManagedModel(provider=provider, model="MiniMax-M3.1-Flash", api_key="test").runtime_config()
+    assert flash.context_window == 1_000_000
+    assert flash.supports_vision and flash.supports_thinking and flash.supports_reasoning_effort
+    assert flash.reasoning.thinking == "required"
+    assert flash.reasoning.history == "preserve"
+    assert flash.reasoning.effort.values == ["low", "medium", "high", "xhigh", "max"]
+    assert flash.reasoning.effort.default == "max"
+    assert flash.when_thinking_enabled == {"extra_body": {"thinking": {"type": "adaptive"}}}
+
+    m3 = ManagedModel(provider=provider, model="MiniMax-M3", api_key="test").runtime_config()
+    assert m3.context_window == 1_000_000
+    assert m3.supports_vision and m3.supports_thinking
+    assert not m3.supports_reasoning_effort
+    assert m3.reasoning.thinking == "optional"
+    assert m3.when_thinking_enabled == {"extra_body": {"thinking": {"type": "adaptive"}}}
+    assert m3.when_thinking_disabled == {"extra_body": {"thinking": {"type": "disabled"}}}
+
+
+def test_minimax_defaults_preserve_saved_overrides_and_custom_endpoint(store):
+    saved = store.save(
+        ManagedModel(provider="minimax", model="MiniMax-M3.1-Flash", api_key="test", context_window=256_000, max_tokens=8192),
+        expected_revision=None,
+    )
+    runtime = saved.runtime_config()
+    assert runtime.context_window == 256_000
+    assert runtime.model_extra["max_tokens"] == 8192
+
+    custom = ManagedModel(provider="openai-compatible", model="MiniMax-M3.1-Flash", base_url="https://proxy.example/v1").runtime_config()
+    assert custom.context_window is None
+    assert not custom.supports_vision
+    assert not custom.supports_thinking
+    assert not custom.supports_reasoning_effort
 
 
 @pytest.mark.asyncio
@@ -278,6 +315,27 @@ async def test_required_thinking_uses_auto_selection_and_bounded_budget(store, w
     assert body["tool_choice"] == "auto"
     assert "thinking" not in body
     assert body["max_tokens"] == 2048
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provider", ["minimax", "minimax-cn"])
+async def test_minimax_m31_keeps_media_and_uses_native_effort(store, wire, provider):
+    profile = ManagedModel(provider=provider, model="MiniMax-M3.1-Flash", api_key="secret-test-key", max_tokens=512)
+    saved = store.save(profile, expected_revision=None)
+    app_config = merge_managed_models(AppConfig.model_validate({"sandbox": {"use": "test"}}))
+    model = create_chat_model(saved.name, app_config=app_config, attach_tracing=False, thinking_enabled=False)
+    image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB"
+
+    async for _ in model.astream([HumanMessage(content=[{"type": "text", "text": "Inspect this image."}, {"type": "image_url", "image_url": {"url": image}}])]):
+        pass
+
+    request, body = wire.requests[0]
+    expected_host = "api.minimax.io" if provider == "minimax" else "api.minimaxi.com"
+    assert request.url.host == expected_host
+    assert body["messages"][0]["content"][1]["image_url"]["url"] == image
+    assert body["reasoning_effort"] == "max"
+    assert body["thinking"] == {"type": "adaptive"}
+    assert body["max_tokens"] == 512
 
 
 @pytest.mark.asyncio
