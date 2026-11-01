@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field, replace
 
 
@@ -26,6 +27,9 @@ class LLMProvider:
     # Per-model extra_config keys to leave out for models whose API rejects
     # them (e.g. Claude Sonnet 5.5 rejects budget_tokens and thinking disabled).
     model_omitted_config: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    # Per-model settings that differ from the provider default. Values replace
+    # top-level extra_config keys after omissions are applied.
+    model_config_overrides: dict[str, dict] = field(default_factory=dict)
     auth_hint: str | None = None
     base_url_prompt: str | None = None
     model_prompt: str | None = None
@@ -38,11 +42,12 @@ class LLMProvider:
 
         Does not mutate the shared provider-level ``extra_config``.
         """
-        config = dict(self.extra_config)
+        config = deepcopy(self.extra_config)
         if model_name in self.model_vision_overrides:
             config["supports_vision"] = self.model_vision_overrides[model_name]
         for key in self.model_omitted_config.get(model_name, ()):
             config.pop(key, None)
+        config.update(deepcopy(self.model_config_overrides.get(model_name, {})))
         return config
 
 
@@ -426,9 +431,9 @@ LLM_PROVIDERS: list[LLMProvider] = [
         name="minimax",
         display_name="MiniMax",
         description="International OpenAI-compatible endpoint",
-        use="langchain_openai:ChatOpenAI",
-        models=["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
-        default_model="MiniMax-M3",
+        use="deerflow.models.patched_minimax:PatchedChatMiniMax",
+        models=["MiniMax-M3.1-Flash", "MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
+        default_model="MiniMax-M3.1-Flash",
         env_var="MINIMAX_API_KEY",
         package="langchain-openai",
         extra_config={
@@ -438,20 +443,43 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "max_tokens": 4096,
             "temperature": 1.0,
             "supports_vision": True,
-            "supports_thinking": True,
+            "context_window": 1_000_000,
+            "reasoning": {
+                "thinking": "required",
+                "dialect": "none",
+                "history": "preserve",
+                "effort": {
+                    "values": ["low", "medium", "high", "xhigh", "max"],
+                    "default": "max",
+                },
+            },
+            "when_thinking_enabled": {"extra_body": {"thinking": {"type": "adaptive"}}},
         },
         model_vision_overrides={
             "MiniMax-M2.7": False,
             "MiniMax-M2.7-highspeed": False,
+        },
+        model_omitted_config={
+            "MiniMax-M2.7": ("context_window", "reasoning", "when_thinking_enabled"),
+            "MiniMax-M2.7-highspeed": ("context_window", "reasoning", "when_thinking_enabled"),
+        },
+        model_config_overrides={
+            "MiniMax-M3": {
+                "reasoning": {"thinking": "optional", "dialect": "none", "history": "preserve"},
+                "when_thinking_enabled": {"extra_body": {"thinking": {"type": "adaptive"}}},
+                "when_thinking_disabled": {"extra_body": {"thinking": {"type": "disabled"}}},
+            },
+            "MiniMax-M2.7": {"supports_thinking": True},
+            "MiniMax-M2.7-highspeed": {"supports_thinking": True},
         },
     ),
     LLMProvider(
         name="minimax_cn",
         display_name="MiniMax CN",
         description="China OpenAI-compatible endpoint",
-        use="langchain_openai:ChatOpenAI",
-        models=["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
-        default_model="MiniMax-M3",
+        use="deerflow.models.patched_minimax:PatchedChatMiniMax",
+        models=["MiniMax-M3.1-Flash", "MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
+        default_model="MiniMax-M3.1-Flash",
         env_var="MINIMAX_API_KEY",
         package="langchain-openai",
         extra_config={
@@ -461,11 +489,34 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "max_tokens": 4096,
             "temperature": 1.0,
             "supports_vision": True,
-            "supports_thinking": True,
+            "context_window": 1_000_000,
+            "reasoning": {
+                "thinking": "required",
+                "dialect": "none",
+                "history": "preserve",
+                "effort": {
+                    "values": ["low", "medium", "high", "xhigh", "max"],
+                    "default": "max",
+                },
+            },
+            "when_thinking_enabled": {"extra_body": {"thinking": {"type": "adaptive"}}},
         },
         model_vision_overrides={
             "MiniMax-M2.7": False,
             "MiniMax-M2.7-highspeed": False,
+        },
+        model_omitted_config={
+            "MiniMax-M2.7": ("context_window", "reasoning", "when_thinking_enabled"),
+            "MiniMax-M2.7-highspeed": ("context_window", "reasoning", "when_thinking_enabled"),
+        },
+        model_config_overrides={
+            "MiniMax-M3": {
+                "reasoning": {"thinking": "optional", "dialect": "none", "history": "preserve"},
+                "when_thinking_enabled": {"extra_body": {"thinking": {"type": "adaptive"}}},
+                "when_thinking_disabled": {"extra_body": {"thinking": {"type": "disabled"}}},
+            },
+            "MiniMax-M2.7": {"supports_thinking": True},
+            "MiniMax-M2.7-highspeed": {"supports_thinking": True},
         },
     ),
     LLMProvider(

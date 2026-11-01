@@ -130,22 +130,72 @@ class TestProviders:
         background = resolve_reasoning_request(contract, thinking_enabled=False, reasoning_effort=None)
         assert background.reasoning_effort == "high"
 
-    def test_minimax_vision_is_per_model(self):
-        """M3 supports vision; M2.7 variants are text-only.
+    def test_minimax_defaults_and_reasoning_are_per_model(self):
+        """Regional defaults use Flash while retaining the distinct M3 policy.
 
-        The provider-level extra_config carries the default (M3) capability, but
-        extra_config_for() must drop vision when an M2.7 model is selected.
+        The provider-level config describes the default model. Per-model
+        overrides must not leak into that shared config.
         """
         providers = {provider.name: provider for provider in LLM_PROVIDERS}
 
-        for name in ("minimax", "minimax_cn"):
+        for name, endpoint in (
+            ("minimax", "https://api.minimax.io/v1"),
+            ("minimax_cn", "https://api.minimaxi.com/v1"),
+        ):
             provider = providers[name]
+            assert provider.use == "deerflow.models.patched_minimax:PatchedChatMiniMax"
+            assert provider.default_model == "MiniMax-M3.1-Flash"
+            assert provider.models[:2] == ["MiniMax-M3.1-Flash", "MiniMax-M3"]
+
+            flash = provider.extra_config_for("MiniMax-M3.1-Flash")
+            assert flash["base_url"] == endpoint
+            assert flash["context_window"] == 1_000_000
+            assert flash["supports_vision"] is True
+            assert flash["reasoning"] == {
+                "thinking": "required",
+                "dialect": "none",
+                "history": "preserve",
+                "effort": {"values": ["low", "medium", "high", "xhigh", "max"], "default": "max"},
+            }
+            assert flash["when_thinking_enabled"] == {"extra_body": {"thinking": {"type": "adaptive"}}}
+            assert "when_thinking_disabled" not in flash
+
+            m3 = provider.extra_config_for("MiniMax-M3")
+            assert m3["context_window"] == 1_000_000
+            assert m3["reasoning"] == {"thinking": "optional", "dialect": "none", "history": "preserve"}
+            assert m3["when_thinking_enabled"] == {"extra_body": {"thinking": {"type": "adaptive"}}}
+            assert m3["when_thinking_disabled"] == {"extra_body": {"thinking": {"type": "disabled"}}}
+
             assert provider.extra_config["supports_vision"] is True
-            assert provider.extra_config_for("MiniMax-M3")["supports_vision"] is True
+            assert m3["supports_vision"] is True
             assert provider.extra_config_for("MiniMax-M2.7")["supports_vision"] is False
             assert provider.extra_config_for("MiniMax-M2.7-highspeed")["supports_vision"] is False
             # Override must not mutate the shared provider-level config.
-            assert provider.extra_config["supports_vision"] is True
+            assert provider.extra_config["reasoning"]["thinking"] == "required"
+
+    def test_minimax_default_generated_config_enforces_flash_contract(self):
+        from deerflow.config.model_config import ModelConfig
+        from deerflow.models.reasoning import resolve_reasoning_contract, resolve_reasoning_request
+
+        for provider in (p for p in LLM_PROVIDERS if p.name in {"minimax", "minimax_cn"}):
+            content = build_minimal_config(
+                provider_use=provider.use,
+                model_name=provider.default_model,
+                display_name=provider.display_name,
+                api_key_field=provider.api_key_field,
+                env_var=provider.env_var,
+                extra_model_config=provider.extra_config_for(provider.default_model),
+            )
+            model = ModelConfig(**yaml.safe_load(content)["models"][0])
+            contract = resolve_reasoning_contract(model)
+            resolved = resolve_reasoning_request(contract, thinking_enabled=False, reasoning_effort=None)
+
+            assert model.model == "MiniMax-M3.1-Flash"
+            assert model.context_window == 1_000_000
+            assert model.supports_thinking is True
+            assert model.supports_reasoning_effort is True
+            assert resolved.thinking_enabled is True
+            assert resolved.reasoning_effort == "max"
 
     def test_anthropic_sonnet_5_5_omits_rejected_thinking_templates(self):
         """Sonnet 5.5 rejects budget_tokens and thinking disabled; other Claude models keep them."""

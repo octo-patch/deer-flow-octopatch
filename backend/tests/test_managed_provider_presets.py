@@ -48,6 +48,32 @@ def test_preset_routing_and_conservative_unknown_capabilities(provider, endpoint
     assert config.context_window is None
 
 
+@pytest.mark.parametrize("provider", ["minimax", "minimax-cn"])
+def test_minimax_model_capabilities_are_exact_and_saved_limits_override_defaults(provider):
+    flash = ManagedModel(provider=provider, model="MiniMax-M3.1-Flash", api_key="test-key").runtime_config()
+    assert flash.context_window == 1_000_000
+    assert flash.supports_vision is True
+    assert flash.reasoning.model_dump(exclude_defaults=True) == {
+        "thinking": "required",
+        "dialect": "none",
+        "history": "preserve",
+        "effort": {"values": ["low", "medium", "high", "xhigh", "max"], "default": "max"},
+    }
+    assert flash.when_thinking_enabled == {"extra_body": {"thinking": {"type": "adaptive"}}}
+    assert flash.when_thinking_disabled is None
+
+    m3 = ManagedModel(provider=provider, model="MiniMax-M3", api_key="test-key").runtime_config()
+    assert m3.context_window == 1_000_000
+    assert m3.supports_vision is True
+    assert m3.supports_reasoning_effort is False
+    assert m3.reasoning.thinking == "optional"
+    assert m3.when_thinking_enabled == {"extra_body": {"thinking": {"type": "adaptive"}}}
+    assert m3.when_thinking_disabled == {"extra_body": {"thinking": {"type": "disabled"}}}
+
+    saved_override = ManagedModel(provider=provider, model="MiniMax-M3.1-Flash", api_key="test-key", context_window=123_456).runtime_config()
+    assert saved_override.context_window == 123_456
+
+
 def test_automatic_names_are_valid_unique_and_stable(store):
     for model in ["a/b c 中文", "中" * 200, "same", "same"]:
         saved = store.save(ManagedModel(provider="openai", model=model, api_key="test"), expected_revision=None)
@@ -278,6 +304,19 @@ async def test_required_thinking_uses_auto_selection_and_bounded_budget(store, w
     assert body["tool_choice"] == "auto"
     assert "thinking" not in body
     assert body["max_tokens"] == 2048
+
+
+@pytest.mark.asyncio
+async def test_minimax_flash_probe_keeps_adaptive_thinking_and_default_effort(store, wire):
+    profile = ManagedModel(provider="minimax", model="MiniMax-M3.1-Flash", api_key="secret-test-key")
+
+    assert await router.test_model(_ADMIN, router.SaveModelRequest(config=profile)) == {"ok": True, "message": "success"}
+
+    body = wire.requests[0][1]
+    assert body["thinking"] == {"type": "adaptive"}
+    assert body["reasoning_effort"] == "max"
+    assert body["max_tokens"] == 2048
+    assert not store.path.exists()
 
 
 @pytest.mark.asyncio

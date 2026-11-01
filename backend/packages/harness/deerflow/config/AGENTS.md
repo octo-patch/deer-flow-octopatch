@@ -228,3 +228,10 @@ endpoints; `ManagedModel.runtime_config()` combines them with profile fields.
 ### Web model provider presets
 
 Managed model provider presets live only in `managed_model_providers.py`. `managed_models.py` reads legacy custom encrypted records compatibly and converts presets into ModelConfig without changing YAML, previous snapshots or injected configurations. See the managed-model section in `../models/AGENTS.md` and the Web registration section of `backend/docs/CONFIGURATION.md`.
+
+The MiniMax regional presets recognize `MiniMax-M3.1-Flash` and `MiniMax-M3`
+exactly. Both have a one-million-token context window and vision input. Flash
+requires adaptive thinking and accepts `low`, `medium`, `high`, `xhigh`, and
+`max` effort with `max` as the default; M3 keeps adaptive thinking optional and
+does not expose effort control. An administrator-saved context-window override
+still wins over the preset default, and unknown IDs remain conservative.

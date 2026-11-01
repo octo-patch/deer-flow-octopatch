@@ -342,6 +342,15 @@ Plan from the model name. Plans/regions without a preset can use the custom
 OpenAI-compatible option if their documented protocol is compatible; native
 protocols need a verified backend preset or operator YAML configuration.
 
+The MiniMax regional setup choices default to `MiniMax-M3.1-Flash` and retain
+`MiniMax-M3` as a direct selection. Both declare a one-million-token context
+window and text, image and video inputs at the provider API; DeerFlow currently
+uses the image capability in chat. Flash keeps adaptive thinking enabled and
+accepts `low`, `medium`, `high`, `xhigh` and `max` reasoning effort, defaulting
+to `max`. M3 allows adaptive thinking to be enabled or disabled and ignores
+reasoning effort. The international and China choices keep their respective
+`https://api.minimax.io/v1` and `https://api.minimaxi.com/v1` endpoints.
+
 The `moonshot-cn` preset recognizes the exact IDs `kimi-k3.1-pro` and
 `kimi-k3.1-pro-highspeed`. Both require thinking, preserve reasoning history,
 and accept top-level `reasoning_effort` values `low`, `high` and `max`, with
