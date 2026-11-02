@@ -124,13 +124,14 @@ class ManagedModel(BaseModel):
             settings["reasoning"] = self.reasoning
         if self.supports_vision is not None:
             settings["supports_vision"] = self.supports_vision
+        if self.context_window is not None:
+            settings["context_window"] = self.context_window
         if self.max_tokens is not None:
             settings["max_tokens"] = self.max_tokens
         return ModelConfig(
             name=self.name or "connection-check",
             display_name=self.display_name or f"{get_managed_model_provider(self.provider).display_name} · {self.model}"[:100],
             model=self.model,
-            context_window=self.context_window,
             **settings,
         )
 

@@ -48,6 +48,53 @@ def test_preset_routing_and_conservative_unknown_capabilities(provider, endpoint
     assert config.context_window is None
 
 
+@pytest.mark.parametrize("provider", ["minimax", "minimax-cn"])
+def test_minimax_m31_flash_uses_required_thinking_and_exact_limits(provider):
+    config = ManagedModel(provider=provider, model="MiniMax-M3.1-Flash", api_key="test-key").runtime_config()
+
+    assert config.context_window == 1_000_000
+    assert config.supports_vision is True
+    assert config.supports_thinking is True
+    assert config.supports_reasoning_effort is True
+    assert config.reasoning.model_dump(exclude_none=True) == {
+        "thinking": "required",
+        "on_disable_request": "keep_enabled",
+        "dialect": "none",
+        "history": "preserve",
+        "effort": {
+            "values": ["low", "medium", "high", "xhigh", "max"],
+            "default": "max",
+            "aliases": {},
+            "path": "reasoning_effort",
+        },
+    }
+    assert config.when_thinking_enabled == {"extra_body": {"thinking": {"type": "adaptive"}}}
+    assert config.when_thinking_disabled is None
+
+
+@pytest.mark.parametrize("provider", ["minimax", "minimax-cn"])
+def test_minimax_m3_keeps_optional_thinking_with_one_million_context(provider):
+    config = ManagedModel(provider=provider, model="MiniMax-M3", api_key="test-key").runtime_config()
+
+    assert config.context_window == 1_000_000
+    assert config.supports_vision is True
+    assert config.supports_thinking is True
+    assert config.supports_reasoning_effort is False
+    assert config.when_thinking_enabled == {"extra_body": {"thinking": {"type": "adaptive"}}}
+    assert config.when_thinking_disabled == {"extra_body": {"thinking": {"type": "disabled"}}}
+
+
+def test_saved_context_window_still_overrides_a_known_preset_limit():
+    config = ManagedModel(
+        provider="minimax",
+        model="MiniMax-M3.1-Flash",
+        api_key="test-key",
+        context_window=900_000,
+    ).runtime_config()
+
+    assert config.context_window == 900_000
+
+
 def test_automatic_names_are_valid_unique_and_stable(store):
     for model in ["a/b c 中文", "中" * 200, "same", "same"]:
         saved = store.save(ManagedModel(provider="openai", model=model, api_key="test"), expected_revision=None)
