@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field, replace
 
 
@@ -23,6 +24,8 @@ class LLMProvider:
     # capability (e.g. MiniMax M3 supports vision but M2.7 is text-only). The
     # provider-level extra_config holds the default (default_model) capability.
     model_vision_overrides: dict[str, bool] = field(default_factory=dict)
+    # Exact model-specific settings layered over the provider defaults.
+    model_extra_config: dict[str, dict] = field(default_factory=dict)
     # Per-model extra_config keys to leave out for models whose API rejects
     # them (e.g. Claude Sonnet 5.5 rejects budget_tokens and thinking disabled).
     model_omitted_config: dict[str, tuple[str, ...]] = field(default_factory=dict)
@@ -38,7 +41,8 @@ class LLMProvider:
 
         Does not mutate the shared provider-level ``extra_config``.
         """
-        config = dict(self.extra_config)
+        config = deepcopy(self.extra_config)
+        config.update(deepcopy(self.model_extra_config.get(model_name, {})))
         if model_name in self.model_vision_overrides:
             config["supports_vision"] = self.model_vision_overrides[model_name]
         for key in self.model_omitted_config.get(model_name, ()):
@@ -426,9 +430,9 @@ LLM_PROVIDERS: list[LLMProvider] = [
         name="minimax",
         display_name="MiniMax",
         description="International OpenAI-compatible endpoint",
-        use="langchain_openai:ChatOpenAI",
-        models=["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
-        default_model="MiniMax-M3",
+        use="deerflow.models.patched_minimax:PatchedChatMiniMax",
+        models=["MiniMax-M3.1-Flash", "MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
+        default_model="MiniMax-M3.1-Flash",
         env_var="MINIMAX_API_KEY",
         package="langchain-openai",
         extra_config={
@@ -436,22 +440,47 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "request_timeout": 600.0,
             "max_retries": 2,
             "max_tokens": 4096,
+            "context_window": 1000000,
+            "pricing": {"currency": "USD", "input_per_million": 0.15, "output_per_million": 0.6, "input_cache_hit_per_million": 0.015},
             "temperature": 1.0,
             "supports_vision": True,
-            "supports_thinking": True,
+            "reasoning": {
+                "thinking": "required",
+                "dialect": "openai_extra_body",
+                "history": "preserve",
+                "effort": {
+                    "values": ["low", "medium", "high", "xhigh", "max"],
+                    "default": "max",
+                },
+            },
+            "when_thinking_enabled": {"extra_body": {"thinking": {"type": "adaptive"}}},
+        },
+        model_extra_config={
+            "MiniMax-M3": {
+                "reasoning": {"thinking": "optional", "dialect": "openai_extra_body", "history": "preserve"},
+                "when_thinking_disabled": {"extra_body": {"thinking": {"type": "disabled"}}},
+            },
+            "MiniMax-M2.7": {"reasoning": {"thinking": "required", "dialect": "none", "history": "preserve"}},
+            "MiniMax-M2.7-highspeed": {"reasoning": {"thinking": "required", "dialect": "none", "history": "preserve"}},
         },
         model_vision_overrides={
             "MiniMax-M2.7": False,
             "MiniMax-M2.7-highspeed": False,
+        },
+        model_omitted_config={
+            "MiniMax-M3.1-Flash": ("max_tokens",),
+            "MiniMax-M3": ("max_tokens", "pricing"),
+            "MiniMax-M2.7": ("context_window", "pricing", "when_thinking_enabled"),
+            "MiniMax-M2.7-highspeed": ("context_window", "pricing", "when_thinking_enabled"),
         },
     ),
     LLMProvider(
         name="minimax_cn",
         display_name="MiniMax CN",
         description="China OpenAI-compatible endpoint",
-        use="langchain_openai:ChatOpenAI",
-        models=["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
-        default_model="MiniMax-M3",
+        use="deerflow.models.patched_minimax:PatchedChatMiniMax",
+        models=["MiniMax-M3.1-Flash", "MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"],
+        default_model="MiniMax-M3.1-Flash",
         env_var="MINIMAX_API_KEY",
         package="langchain-openai",
         extra_config={
@@ -459,13 +488,38 @@ LLM_PROVIDERS: list[LLMProvider] = [
             "request_timeout": 600.0,
             "max_retries": 2,
             "max_tokens": 4096,
+            "context_window": 1000000,
+            "pricing": {"currency": "USD", "input_per_million": 0.15, "output_per_million": 0.6, "input_cache_hit_per_million": 0.015},
             "temperature": 1.0,
             "supports_vision": True,
-            "supports_thinking": True,
+            "reasoning": {
+                "thinking": "required",
+                "dialect": "openai_extra_body",
+                "history": "preserve",
+                "effort": {
+                    "values": ["low", "medium", "high", "xhigh", "max"],
+                    "default": "max",
+                },
+            },
+            "when_thinking_enabled": {"extra_body": {"thinking": {"type": "adaptive"}}},
+        },
+        model_extra_config={
+            "MiniMax-M3": {
+                "reasoning": {"thinking": "optional", "dialect": "openai_extra_body", "history": "preserve"},
+                "when_thinking_disabled": {"extra_body": {"thinking": {"type": "disabled"}}},
+            },
+            "MiniMax-M2.7": {"reasoning": {"thinking": "required", "dialect": "none", "history": "preserve"}},
+            "MiniMax-M2.7-highspeed": {"reasoning": {"thinking": "required", "dialect": "none", "history": "preserve"}},
         },
         model_vision_overrides={
             "MiniMax-M2.7": False,
             "MiniMax-M2.7-highspeed": False,
+        },
+        model_omitted_config={
+            "MiniMax-M3.1-Flash": ("max_tokens",),
+            "MiniMax-M3": ("max_tokens", "pricing"),
+            "MiniMax-M2.7": ("context_window", "pricing", "when_thinking_enabled"),
+            "MiniMax-M2.7-highspeed": ("context_window", "pricing", "when_thinking_enabled"),
         },
     ),
     LLMProvider(

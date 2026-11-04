@@ -237,19 +237,57 @@ models:
         thinking:
           type: enabled
 
+  - name: minimax-m3.1-flash
+    display_name: MiniMax M3.1 Flash
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
+    model: MiniMax-M3.1-Flash
+    api_key: $MINIMAX_API_KEY
+    base_url: https://api.minimax.io/v1
+    context_window: 1000000
+    pricing:
+      currency: USD
+      input_per_million: 0.15
+      output_per_million: 0.6
+      input_cache_hit_per_million: 0.015
+    temperature: 1.0
+    supports_vision: true
+    reasoning:
+      thinking: required
+      dialect: openai_extra_body
+      history: preserve
+      effort:
+        values: [low, medium, high, xhigh, max]
+        default: max
+    when_thinking_enabled:
+      extra_body:
+        thinking:
+          type: adaptive
+
   - name: minimax-m3
     display_name: MiniMax M3
-    use: langchain_openai:ChatOpenAI
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
     model: MiniMax-M3
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
-    max_tokens: 4096
+    context_window: 1000000
     temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
     supports_vision: true
+    reasoning:
+      thinking: optional
+      dialect: openai_extra_body
+      history: preserve
+    when_thinking_enabled:
+      extra_body:
+        thinking:
+          type: adaptive
+    when_thinking_disabled:
+      extra_body:
+        thinking:
+          type: disabled
 
   - name: minimax-m2.7
     display_name: MiniMax M2.7
-    use: langchain_openai:ChatOpenAI
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
     model: MiniMax-M2.7
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
@@ -259,7 +297,7 @@ models:
 
   - name: minimax-m2.7-highspeed
     display_name: MiniMax M2.7 Highspeed
-    use: langchain_openai:ChatOpenAI
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
     model: MiniMax-M2.7-highspeed
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
@@ -372,7 +410,8 @@ and official [DashScope SDK](https://pypi.org/project/dashscope/),
 [Moonshot API docs](https://platform.moonshot.cn/docs/guide/start-using-kimi-api),
 [Z.AI SDK](https://pypi.org/project/zai-sdk/) (`zai/_client.py` distinguishes the
 China and international endpoints), and
-[MiniMax OpenAI API docs](https://platform.minimax.io/docs/api-reference/text-openai-api)
+[MiniMax model guide](https://platform.minimax.io/docs/guides/models-intro.md) and
+[OpenAI-compatible API docs](https://platform.minimax.io/docs/api-reference/text-chat-openai.md)
 with the official [MiniMax MCP region settings](https://github.com/MiniMax-AI/MiniMax-MCP).
 The existing `config.example.yaml` documents Ark Coding Plan and the model-specific
 DeepSeek, Kimi, GLM, Anthropic, Doubao and MiniMax parameters. During implementation,

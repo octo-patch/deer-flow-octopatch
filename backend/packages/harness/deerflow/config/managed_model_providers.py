@@ -125,10 +125,24 @@ def _capabilities(provider: str, model: str) -> dict[str, Any]:
         )
     elif provider in {"minimax", "minimax-cn"} and model in {"MiniMax-M2.7", "MiniMax-M2.7-highspeed"}:
         result["reasoning"] = {"thinking": "required", "dialect": "none", "history": "preserve"}
+    elif provider in {"minimax", "minimax-cn"} and model == "MiniMax-M3.1-Flash":
+        result.update(
+            supports_vision=True,
+            context_window=1_000_000,
+            pricing={"currency": "USD", "input_per_million": 0.15, "output_per_million": 0.6, "input_cache_hit_per_million": 0.015},
+            reasoning={
+                "thinking": "required",
+                "dialect": "openai_extra_body",
+                "history": "preserve",
+                "effort": {"values": ["low", "medium", "high", "xhigh", "max"], "default": "max"},
+            },
+            when_thinking_enabled={"extra_body": {"thinking": {"type": "adaptive"}}},
+        )
     elif provider in {"minimax", "minimax-cn"} and model == "MiniMax-M3":
         result.update(
             supports_vision=True,
-            reasoning={"thinking": "optional", "dialect": "none", "history": "preserve"},
+            context_window=1_000_000,
+            reasoning={"thinking": "optional", "dialect": "openai_extra_body", "history": "preserve"},
             when_thinking_enabled={"extra_body": {"thinking": {"type": "adaptive"}}},
             when_thinking_disabled={"extra_body": {"thinking": {"type": "disabled"}}},
         )
