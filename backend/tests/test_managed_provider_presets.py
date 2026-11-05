@@ -147,6 +147,51 @@ def test_preset_overrides_and_injected_config_remain_authoritative(store):
     assert store.list()[0].name == saved.name
 
 
+@pytest.mark.parametrize("provider", ["minimax", "minimax-cn"])
+def test_minimax_m31_and_m3_have_exact_regional_capabilities(provider):
+    flash = ManagedModel(provider=provider, model="MiniMax-M3.1-Flash", api_key="test").runtime_config()
+    assert flash.context_window == 1_000_000
+    assert flash.supports_vision is True
+    assert flash.reasoning.thinking == "required"
+    assert flash.reasoning.effort.values == ["low", "medium", "high", "xhigh", "max"]
+    assert flash.reasoning.effort.default == "max"
+    assert flash.when_thinking_disabled is None
+
+    m3 = ManagedModel(provider=provider, model="MiniMax-M3", api_key="test").runtime_config()
+    assert m3.context_window == 1_000_000
+    assert m3.supports_vision is True
+    assert m3.reasoning.thinking == "optional"
+    assert m3.reasoning.effort is None
+    assert m3.when_thinking_disabled == {"extra_body": {"thinking": {"type": "disabled"}}}
+
+
+def test_minimax_saved_limits_override_presets_without_changing_custom_models():
+    saved = ManagedModel(
+        provider="minimax",
+        model="MiniMax-M3.1-Flash",
+        api_key="test",
+        context_window=123_456,
+        max_tokens=789,
+        supports_vision=False,
+    ).runtime_config()
+    assert saved.context_window == 123_456
+    assert saved.max_tokens == 789
+    assert saved.supports_vision is False
+
+    custom = ManagedModel(
+        provider="openai-compatible",
+        model="MiniMax-M3.1-Flash",
+        base_url="https://proxy.example/v1",
+        context_window=321,
+        supports_vision=False,
+    ).runtime_config()
+    assert custom.use == "langchain_openai:ChatOpenAI"
+    assert custom.context_window == 321
+    assert custom.supports_vision is False
+    assert custom.reasoning is None
+    assert custom.supports_thinking is False
+
+
 @pytest.mark.asyncio
 async def test_provider_metadata_requires_admin():
     catalog = await router.list_model_providers(_ADMIN)

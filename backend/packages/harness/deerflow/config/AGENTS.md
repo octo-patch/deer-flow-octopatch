@@ -243,6 +243,11 @@ Keep custom endpoints and unknown IDs unchanged. Real SDK probe, saved-chat and 
 
 Managed model provider presets live only in `managed_model_providers.py`. `managed_models.py` reads legacy custom encrypted records compatibly and converts presets into ModelConfig without changing YAML, previous snapshots or injected configurations. See the managed-model section in `../models/AGENTS.md` and the Web registration section of `backend/docs/CONFIGURATION.md`.
 
+MiniMax's international and China presets recognize exact model IDs. M3.1 Flash
+has a 1M context window, required thinking and native `low` through `max` effort
+(default `max`); M3 keeps optional thinking and the same window. Saved capability
+overrides take precedence, and custom endpoints remain conservative.
+
 Catalog imports use `ManagedModelStore.save(deduplicate=True)` under the existing
 thread/process lock, checking the saved source revision before deduplication
 by provider, endpoint, key and model ID. Ordinary edits

@@ -244,6 +244,12 @@ never infer that adapter from a model-name substring. Reads do not migrate the
 catalog. New names are allocated under the existing catalog lock with bounded
 ASCII slugs and random suffixes; edits preserve names and references.
 
+The exact MiniMax M3.1 Flash ID has required thinking, preserved history,
+`low/medium/high/xhigh/max` effort (default `max`), native vision and a 1M
+context window in both regional presets. M3 retains optional thinking, native
+vision and the same window. A saved context or vision override wins; custom
+OpenAI-compatible profiles do not inherit either preset.
+
 Moonshot's two exact K3.1 Pro IDs use required thinking, `dialect=none`, preserved
 history and native `low/high/max` effort (default `max`, no aliases). The shared
 DeepSeek adapter gates final request normalization on the official Moonshot
