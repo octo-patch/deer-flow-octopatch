@@ -112,6 +112,7 @@ class ManagedModel(BaseModel):
             if not api_key:
                 raise ValueError("This provider requires an API key")
             settings = resolve_preset_model(self.provider, self.model, api_key)
+        preset_context_window = settings.pop("context_window", None)
         if self.reasoning is not None:
             # Remove derived legacy fields/templates when an admin supplies a
             # contract. Protocol dialect is still interpreted by the factory.
@@ -145,7 +146,7 @@ class ManagedModel(BaseModel):
             name=self.name or "connection-check",
             display_name=self.display_name or f"{get_managed_model_provider(self.provider).display_name} · {self.model}"[:100],
             model=self.model,
-            context_window=self.context_window,
+            context_window=self.context_window if self.context_window is not None else preset_context_window,
             **settings,
         )
         result._managed_provider = get_managed_model_provider(self.provider).display_name

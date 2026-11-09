@@ -340,6 +340,8 @@ fences, including unclosed fences, in complete and streamed replies.
    Volcengine/Doubao, Moonshot/Kimi, Zhipu/Z.AI, MiniMax and StepFun. Region and plan-specific
    entries are explicitly distinguished. Arbitrary model IDs are accepted; internal
    names are generated automatically and remain stable when a model ID changes.
+   The MiniMax regional presets recognize M3.1 Flash's required, tunable reasoning
+   and 1M context limit while keeping M3's optional-thinking behavior.
    Newly saved models are enabled and immediately refresh existing chat and Agent
    model selectors, without editing YAML or restarting the Gateway.
 
