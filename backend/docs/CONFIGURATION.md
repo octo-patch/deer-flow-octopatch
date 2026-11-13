@@ -237,15 +237,46 @@ models:
         thinking:
           type: enabled
 
+  - name: minimax-m3.1-flash
+    display_name: MiniMax M3.1 Flash
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
+    model: MiniMax-M3.1-Flash
+    api_key: $MINIMAX_API_KEY
+    base_url: https://api.minimax.io/v1
+    max_tokens: 4096
+    temperature: 1.0
+    supports_vision: true
+    context_window: 1000000
+    reasoning:
+      thinking: required
+      dialect: none
+      history: preserve
+      effort:
+        values: [low, medium, high, xhigh, max]
+        default: max
+
   - name: minimax-m3
     display_name: MiniMax M3
-    use: langchain_openai:ChatOpenAI
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
     model: MiniMax-M3
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
     max_tokens: 4096
     temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
     supports_vision: true
+    context_window: 1000000
+    reasoning:
+      thinking: optional
+      dialect: none
+      history: preserve
+    when_thinking_enabled:
+      extra_body:
+        thinking:
+          type: adaptive
+    when_thinking_disabled:
+      extra_body:
+        thinking:
+          type: disabled
 
   - name: minimax-m2.7
     display_name: MiniMax M2.7
@@ -432,6 +463,9 @@ existing adapter for reasoning fields and user-message name normalization and
 uses its documented `max_tokens` wire parameter. MiniMax defaults to temperature
 1.0; Anthropic has a default output budget of 4096 because Messages requires an
 output cap. These request defaults are separate from model capability rules.
+The exact MiniMax-M3.1-Flash preset uses a 1M context window and required
+thinking with `low`, `medium`, `high`, `xhigh`, and `max` effort (default
+`max`). MiniMax-M3 keeps its optional-thinking contract and the same window.
 
 To add a preset, append a stable ID and verified endpoint, adapter, protocol,
 authentication/SDK parameter mapping and required request defaults to `PROVIDERS`.
