@@ -237,35 +237,63 @@ models:
         thinking:
           type: enabled
 
+  - name: minimax-m3-1-flash
+    display_name: MiniMax M3.1 Flash
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
+    model: MiniMax-M3.1-Flash
+    api_key: $MINIMAX_API_KEY
+    base_url: https://api.minimax.io/v1
+    max_tokens: 4096
+    temperature: 1.0
+    supports_vision: true
+    context_window: 1000000
+    reasoning:
+      thinking: required
+      dialect: none
+      history: preserve
+      effort:
+        values: [low, medium, high, xhigh, max]
+        default: max
+        aliases: {minimal: low}
+
   - name: minimax-m3
     display_name: MiniMax M3
-    use: langchain_openai:ChatOpenAI
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
     model: MiniMax-M3
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
     max_tokens: 4096
     temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
     supports_vision: true
+    context_window: 1000000
+    reasoning:
+      thinking: optional
+      dialect: none
+      history: preserve
+    when_thinking_enabled:
+      extra_body: {thinking: {type: adaptive}}
+    when_thinking_disabled:
+      extra_body: {thinking: {type: disabled}}
 
   - name: minimax-m2.7
     display_name: MiniMax M2.7
-    use: langchain_openai:ChatOpenAI
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
     model: MiniMax-M2.7
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
     max_tokens: 4096
     temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
-    supports_vision: false  # M2.7 is text-only; M3 supports vision
+    supports_vision: false  # M2.7 is text-only; M3-family models support vision
 
   - name: minimax-m2.7-highspeed
     display_name: MiniMax M2.7 Highspeed
-    use: langchain_openai:ChatOpenAI
+    use: deerflow.models.patched_minimax:PatchedChatMiniMax
     model: MiniMax-M2.7-highspeed
     api_key: $MINIMAX_API_KEY
     base_url: https://api.minimax.io/v1
     max_tokens: 4096
     temperature: 1.0  # MiniMax requires temperature in (0.0, 1.0]
-    supports_vision: false  # M2.7 is text-only; M3 supports vision
+    supports_vision: false  # M2.7 is text-only; M3-family models support vision
   - name: openrouter-gemini-2.5-flash
     display_name: Gemini 2.5 Flash (OpenRouter)
     use: langchain_openai:ChatOpenAI

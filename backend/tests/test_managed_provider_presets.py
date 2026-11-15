@@ -16,6 +16,7 @@ from deerflow.config.app_config import AppConfig, get_app_config, reset_app_conf
 from deerflow.config.managed_model_providers import PROVIDERS
 from deerflow.config.managed_models import ManagedModel, ManagedModelInputError, ManagedModelStore, merge_managed_models
 from deerflow.models.factory import create_chat_model
+from deerflow.models.reasoning import resolve_reasoning_contract, resolve_reasoning_request
 
 
 @pytest.fixture
@@ -146,6 +147,35 @@ def test_preset_overrides_and_injected_config_remain_authoritative(store):
     finally:
         reset_app_config()
     assert store.list()[0].name == saved.name
+
+
+@pytest.mark.parametrize("provider", ["minimax", "minimax-cn"])
+def test_minimax_presets_keep_model_specific_reasoning_and_context(provider):
+    flash = ManagedModel(provider=provider, model="MiniMax-M3.1-Flash", api_key="test").runtime_config()
+    flash_contract = resolve_reasoning_contract(flash)
+    assert flash.context_window == 1000000
+    assert flash.supports_vision is True
+    assert flash_contract.thinking == "required"
+    assert resolve_reasoning_request(flash_contract, thinking_enabled=False, reasoning_effort=None).reasoning_effort == "max"
+    assert resolve_reasoning_request(flash_contract, thinking_enabled=False, reasoning_effort="minimal").reasoning_effort == "low"
+
+    m3 = ManagedModel(provider=provider, model="MiniMax-M3", api_key="test").runtime_config()
+    assert m3.context_window == 1000000
+    assert m3.supports_vision is True
+    assert m3.reasoning.thinking == "optional"
+    assert m3.reasoning.effort is None
+    assert m3.when_thinking_enabled == {"extra_body": {"thinking": {"type": "adaptive"}}}
+    assert m3.when_thinking_disabled == {"extra_body": {"thinking": {"type": "disabled"}}}
+
+
+def test_minimax_saved_context_override_and_custom_provider_remain_authoritative():
+    saved = ManagedModel(provider="minimax", model="MiniMax-M3.1-Flash", api_key="test", context_window=12345).runtime_config()
+    assert saved.context_window == 12345
+
+    custom = ManagedModel(provider="openai-compatible", model="MiniMax-M3.1-Flash", base_url="https://gateway.example/v1", context_window=54321).runtime_config()
+    assert custom.context_window == 54321
+    assert custom.supports_thinking is False
+    assert custom.supports_reasoning_effort is False
 
 
 @pytest.mark.asyncio
