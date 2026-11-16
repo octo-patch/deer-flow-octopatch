@@ -49,6 +49,50 @@ def test_preset_routing_and_conservative_unknown_capabilities(provider, endpoint
     assert config.context_window is None
 
 
+@pytest.mark.parametrize(
+    "provider,endpoint",
+    [
+        ("minimax", "https://api.minimax.io/v1"),
+        ("minimax-cn", "https://api.minimaxi.com/v1"),
+    ],
+)
+def test_minimax_exact_models_apply_regional_capabilities(provider, endpoint):
+    flash = ManagedModel(provider=provider, model="MiniMax-M3.1-Flash", api_key="test-key").runtime_config()
+    assert flash.use == "deerflow.models.patched_minimax:PatchedChatMiniMax"
+    assert flash.model_extra["base_url"] == endpoint
+    assert flash.context_window == 1000000
+    assert flash.supports_vision and flash.supports_thinking and flash.supports_reasoning_effort
+    assert flash.reasoning is not None
+    assert flash.reasoning.thinking == "required"
+    assert flash.reasoning.history == "preserve"
+    assert flash.reasoning.effort is not None
+    assert flash.reasoning.effort.values == ["low", "medium", "high", "xhigh", "max"]
+    assert flash.reasoning.effort.default == "max"
+    assert flash.when_thinking_disabled is None
+
+    m3 = ManagedModel(provider=provider, model="MiniMax-M3", api_key="test-key").runtime_config()
+    assert m3.context_window == 1000000
+    assert m3.supports_vision and m3.supports_thinking
+    assert not m3.supports_reasoning_effort
+    assert m3.reasoning is not None and m3.reasoning.thinking == "optional"
+    assert m3.when_thinking_enabled == {"extra_body": {"thinking": {"type": "adaptive"}}}
+    assert m3.when_thinking_disabled == {"extra_body": {"thinking": {"type": "disabled"}}}
+
+
+def test_minimax_saved_limits_and_media_overrides_remain_authoritative():
+    config = ManagedModel(
+        provider="minimax",
+        model="MiniMax-M3.1-Flash",
+        api_key="test-key",
+        context_window=123456,
+        max_tokens=321,
+        supports_vision=False,
+    ).runtime_config()
+    assert config.context_window == 123456
+    assert config.max_tokens == 321
+    assert config.supports_vision is False
+
+
 def test_automatic_names_are_valid_unique_and_stable(store):
     for model in ["a/b c 中文", "中" * 200, "same", "same"]:
         saved = store.save(ManagedModel(provider="openai", model=model, api_key="test"), expected_revision=None)
@@ -273,13 +317,18 @@ async def test_known_optional_thinking_disabled_only_for_probe(store, wire, prov
 
 
 @pytest.mark.asyncio
-async def test_required_thinking_uses_auto_selection_and_bounded_budget(store, wire):
-    profile = ManagedModel(provider="minimax", model="MiniMax-M2.7", api_key="secret-test-key")
+@pytest.mark.parametrize("model,effort", [("MiniMax-M2.7", None), ("MiniMax-M3.1-Flash", "max")])
+async def test_required_thinking_uses_auto_selection_and_bounded_budget(store, wire, model, effort):
+    profile = ManagedModel(provider="minimax", model=model, api_key="secret-test-key")
     assert await router.test_model(_ADMIN, router.SaveModelRequest(config=profile)) == {"ok": True, "message": "success"}
     body = wire.requests[0][1]
     assert body["tool_choice"] == "auto"
     assert "thinking" not in body
     assert body["max_tokens"] == 2048
+    if effort is None:
+        assert "reasoning_effort" not in body
+    else:
+        assert body["reasoning_effort"] == effort
 
 
 @pytest.mark.asyncio

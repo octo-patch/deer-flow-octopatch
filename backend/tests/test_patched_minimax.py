@@ -21,6 +21,43 @@ def test_get_request_payload_preserves_thinking_and_forces_reasoning_split():
     assert payload["extra_body"]["reasoning_split"] is True
 
 
+def test_m31_flash_official_endpoints_keep_required_thinking_and_drop_service_tier():
+    for endpoint in ("https://api.minimax.io/v1", "https://api.minimaxi.com/v1"):
+        model = PatchedChatMiniMax(
+            model="MiniMax-M3.1-Flash",
+            api_key="test-key",
+            base_url=endpoint,
+            service_tier="priority",
+            extra_body={"thinking": {"type": "disabled"}, "service_tier": "priority", "metadata": {"source": "test"}},
+        )
+
+        payload = model._get_request_payload([HumanMessage(content="hello")])
+
+        assert "thinking" not in payload
+        assert "service_tier" not in payload
+        assert payload["extra_body"] == {"metadata": {"source": "test"}, "reasoning_split": True}
+
+
+def test_m31_flash_custom_endpoint_and_m3_keep_caller_options():
+    for model_id, endpoint in (
+        ("MiniMax-M3.1-Flash", "https://proxy.example.com/v1"),
+        ("MiniMax-M3", "https://api.minimax.io/v1"),
+    ):
+        model = PatchedChatMiniMax(
+            model=model_id,
+            api_key="test-key",
+            base_url=endpoint,
+            service_tier="priority",
+            extra_body={"thinking": {"type": "disabled"}, "metadata": {"source": "test"}},
+        )
+
+        payload = model._get_request_payload([HumanMessage(content="hello")])
+
+        assert payload["service_tier"] == "priority"
+        assert payload["extra_body"]["thinking"] == {"type": "disabled"}
+        assert payload["extra_body"]["metadata"] == {"source": "test"}
+
+
 def test_get_request_payload_strips_inconsistent_user_message_names():
     """MiniMax rejects user messages whose `name` fields differ (error 2013).
 

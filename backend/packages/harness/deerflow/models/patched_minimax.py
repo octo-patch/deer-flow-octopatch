@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from typing import Any
+from urllib.parse import urlsplit
 
 from langchain_core.language_models import LanguageModelInput
 from langchain_core.messages import AIMessage, AIMessageChunk
@@ -124,15 +125,25 @@ class PatchedChatMiniMax(GuardedChatOpenAI):
         if "max_completion_tokens" in payload:
             payload["max_tokens"] = payload.pop("max_completion_tokens")
         extra_body = payload.get("extra_body")
-        if isinstance(extra_body, dict):
-            payload["extra_body"] = {
-                **extra_body,
-                "reasoning_split": True,
-            }
-        else:
-            payload["extra_body"] = {"reasoning_split": True}
+        effective_model = extra_body.get("model", payload.get("model")) if isinstance(extra_body, Mapping) else payload.get("model")
+        normalized_extra_body = dict(extra_body) if isinstance(extra_body, Mapping) else {}
+        if effective_model == "MiniMax-M3.1-Flash" and self._uses_official_endpoint():
+            # This model always uses adaptive thinking and does not accept a
+            # service tier. Removing caller switches preserves the API defaults.
+            payload.pop("thinking", None)
+            payload.pop("service_tier", None)
+            normalized_extra_body.pop("thinking", None)
+            normalized_extra_body.pop("service_tier", None)
+        payload["extra_body"] = {**normalized_extra_body, "reasoning_split": True}
         self._strip_user_message_names(payload)
         return payload
+
+    def _uses_official_endpoint(self) -> bool:
+        try:
+            endpoint = urlsplit(str(self.openai_api_base or ""))
+            return endpoint.scheme == "https" and endpoint.hostname in {"api.minimax.io", "api.minimaxi.com"} and endpoint.port in (None, 443) and endpoint.path.rstrip("/") == "/v1"
+        except ValueError:
+            return False
 
     @staticmethod
     def _strip_user_message_names(payload: dict) -> None:
