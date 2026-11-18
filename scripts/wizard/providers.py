@@ -107,9 +107,7 @@ ANTHROPIC_THINKING_CONFIG = {
 }
 
 
-def with_thinking_support(
-    provider: LLMProvider, supports_thinking: bool
-) -> LLMProvider:
+def with_thinking_support(provider: LLMProvider, supports_thinking: bool) -> LLMProvider:
     """Return a copy of *provider* with thinking-capability flags applied.
 
     For generic OpenAI-compatible gateways the wizard cannot infer whether the
@@ -282,9 +280,7 @@ LLM_PROVIDERS: list[LLMProvider] = [
             **ANTHROPIC_THINKING_CONFIG,
         },
         # Sonnet 5.5 thinks by default and rejects budget_tokens and thinking disabled.
-        model_omitted_config={
-            "claude-sonnet-5-5": ("when_thinking_enabled", "when_thinking_disabled")
-        },
+        model_omitted_config={"claude-sonnet-5-5": ("when_thinking_enabled", "when_thinking_disabled")},
     ),
     LLMProvider(
         name="deepseek",
@@ -381,13 +377,7 @@ LLM_PROVIDERS: list[LLMProvider] = [
         display_name="Xiaomi MiMo",
         description="MiMo thinking models with reasoning replay",
         use="deerflow.models.patched_mimo:PatchedChatMiMo",
-        models=[
-            "mimo-v2.5-pro",
-            "mimo-v2.5",
-            "mimo-v2-pro",
-            "mimo-v2-omni",
-            "mimo-v2-flash",
-        ],
+        models=["mimo-v2.5-pro", "mimo-v2.5", "mimo-v2-pro", "mimo-v2-omni", "mimo-v2-flash"],
         default_model="mimo-v2.5-pro",
         env_var="MIMO_API_KEY",
         package="langchain-openai",
@@ -582,11 +572,7 @@ LLM_PROVIDERS: list[LLMProvider] = [
         display_name="OpenRouter",
         description="OpenAI-compatible gateway with broad model catalog",
         use="langchain_openai:ChatOpenAI",
-        models=[
-            "google/gemini-2.5-flash-preview",
-            "openai/gpt-5-mini",
-            "anthropic/claude-sonnet-4",
-        ],
+        models=["google/gemini-2.5-flash-preview", "openai/gpt-5-mini", "anthropic/claude-sonnet-4"],
         default_model="google/gemini-2.5-flash-preview",
         env_var="OPENROUTER_API_KEY",
         package="langchain-openai",
@@ -603,12 +589,7 @@ LLM_PROVIDERS: list[LLMProvider] = [
         display_name="OrcaRouter",
         description="OpenAI-compatible adaptive routing gateway",
         use="langchain_openai:ChatOpenAI",
-        models=[
-            "openai/gpt-5.5",
-            "anthropic/claude-opus-4.8",
-            "google/gemini-3.5-flash",
-            "orcarouter/auto",
-        ],
+        models=["openai/gpt-5.5", "anthropic/claude-opus-4.8", "google/gemini-3.5-flash", "orcarouter/auto"],
         default_model="openai/gpt-5.5",
         env_var="ORCAROUTER_API_KEY",
         package="langchain-openai",

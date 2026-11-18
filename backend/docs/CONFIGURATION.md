@@ -344,7 +344,7 @@ OpenAI-compatible option if their documented protocol is compatible; native
 protocols need a verified backend preset or operator YAML configuration.
 
 The two MiniMax regional presets recognize the exact IDs `MiniMax-M3.1-Flash`
-and `MiniMax-M3`. Both use the regional OpenAI-compatible endpoint, preserve
+and `MiniMax-M3`. Both use the regional chat endpoint, preserve
 reasoning history, accept image input and declare a 1,000,000-token context
 window. `MiniMax-M3.1-Flash` requires thinking and accepts `low`, `medium`,
 `high`, `xhigh` and `max` reasoning effort, defaulting to `max` when a caller
@@ -354,7 +354,7 @@ thinking, exposes no reasoning-effort control and retains service-tier requests.
 The setup wizard lists both and selects
 `MiniMax-M3.1-Flash` by default for new direct regional configurations.
 Administrator-saved context, output-token and vision overrides remain
-authoritative; unknown IDs and custom OpenAI-compatible endpoints keep their
+authoritative. Unknown IDs and custom endpoints keep their
 conservative existing behavior.
 
 The StepFun preset uses the existing `PatchedChatStepFun` adapter to capture
